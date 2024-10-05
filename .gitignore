@@ -1,2 +1,5 @@
 # BUILD
 target/
+
+# CONFIG
+.vscode
