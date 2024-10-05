@@ -3,9 +3,6 @@ name = "kfs"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
-bootloader = "0.9.23"
-
 [profile.dev]
 panic = "abort"
 
