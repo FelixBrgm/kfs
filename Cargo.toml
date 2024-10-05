@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-
-
-[profile.release]
-panic = "abort"
+bootloader = "0.9.23"
 
 [profile.dev]
+panic = "abort"
+
+[profile.release]
 panic = "abort"
