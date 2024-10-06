@@ -14,6 +14,3 @@ header_start: ; label -> allows to refer to specific part of code
     dw 0    ; flags
     dw 0    ; size
 header_end:
-
-_start:
-    jmp _start
