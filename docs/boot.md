@@ -23,22 +23,30 @@ header_end:
 
 `section .multiboot_header`: 
 * Section annotation, needed by the linker to find the boot code.
+
 `header_start:` & `header_end:`: 
 * "labels", let us use a name to refer to a particular part of our code.
+
 `dd 0xe85250d6`: 
 * `dd`: Short for "define double word" - one word is 16 bits (like in networking), therefore a double word is 32 bits. 
 * `0xe85250d6`: The Multiboot specification requires this number be right at the start of the boot code. It is an arbitrary magic number - no need to think about it further.
+
 `dd 0`:
 * `0`: Specifies the boot mode (protected).
+
 `dd header_end - header_start`:
 * Multiboot expects this value to be the header length, so we use pointer arithmetic to let the CPU calculate it.
+
 `dd 0x100000000 - (0xe85250d6 + 0 + (header_end - header_start))`:
 * **checksum**, ensures all values are what they are expected to be. 
 	* `0x100000000` overflows to `0`
+
 `dw 0`:
 * End tag type.
+
 `dw 0`
 * End tag flags.
+
 `dd 8`
 * End tag size.
 
@@ -100,11 +108,13 @@ We will need to [link](#linking) our [multiboot header](#multiboot-header) and o
 ```sh
 cargo rustc --release -- -emit=obj
 ```
+
 This will output our object file into `target/x86_64-unknown-none/release/deps/kfs-*.o`.
 ### Linking
 We will now link `multiboot_header.o` and `kfs-*.o` into one binary. For this, we will create a linker script.
 
 `linker.ld`:
+
 ```ld
 ENTRY (_start)
 
@@ -126,31 +136,40 @@ SECTIONS
 
 `ENTRY (_start)`:
 * Sets the "entry point" of the executable, same symbol as in `main.rs`.
+
 `SECTIONS`:
 * Describes where different sections of the binary need to go.
+
 `. = 1M;`
 * We start putting sections from the one MB mark. Below that is stuff you do not want to touch..
+
 ```
 .boot : 
 {
 	*(.multiboot_header)
 }
 ```
+
 * Creates a section named `boot` and put every section named `multiboot_header` inside of it for grub to see it.
+
 ```
 .text :
 {
 	*(.text)
 }
 ```
+
 * This is where the code goes.
 
 We can now use this script to link our binaries like follows:
+
 ```sh
 ld --nmagic --output=kernel --script=linker.ld multiboot_header.o kfs-*.o
 ```
+
 `--nmagic`:
 * Turns off automatic page alignment, reducing the binary file's size.
+
 ### ISO
 #### ISO File System Structure
 ```
@@ -162,6 +181,7 @@ iso/
 ```
 
 `iso/boot/grub/grub.cfg`:
+
 ```cfg
 set timeout=0
 set default=0
@@ -171,25 +191,33 @@ menuentry "kfs" {
 	boot
 }
 ```
+
 This file configures GRUB. GRUB lets us load different operating systems, displaying a menu of choices on boot. Each `menuentry` is one of those choices.
 
 `iso/boot/kernel` is just the binary we created in the linking process.
 
 We can now create our `.iso` file using `grub-mkrescue`:
+
 ```sh
 grub-mkrescue -o kfs.iso ./iso
 ```
+
 ### Running the Kernel
 To run our kernel, we use QEMU. QEMU is a system emulator. Run:
+
 ```sh
 qemu-system-x86_64 -cdrom kfs.iso -boot d -nographic
 ```
+
 `x86_64`:
 * Specifies the QEMU variant.
+
 `-cdrom kfs.iso`:
 * Start QEMU with CD-ROM drive, its contents being `kfs.iso`.
+
 `-boot d`
 * Makes QEMU boot from CD-ROM directly instead of trying Hard Disk and Floppy first.
+
 `-nographic`:
 * Runs the kernel in text mode.
 
