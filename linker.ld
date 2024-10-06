@@ -1,4 +1,6 @@
+/* kernel entrypoint */
 ENTRY (_start)
+
 
 SECTIONS
 {
