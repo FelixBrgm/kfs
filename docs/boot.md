@@ -194,6 +194,6 @@ qemu-system-x86_64 -cdrom kfs.iso -boot d -nographic
 * Runs the kernel in text mode.
 
 #### Resources
-https://www.qemu.org/
-[Multiboot Spec](https://nongnu.askapache.com/grub/phcoder/multiboot.pdf)
-https://intermezzos.github.io/book/first-edition/multiboot-headers.html
+* https://www.qemu.org/
+* [Multiboot Spec](https://nongnu.askapache.com/grub/phcoder/multiboot.pdf)
+* https://intermezzos.github.io/book/first-edition/multiboot-headers.html
