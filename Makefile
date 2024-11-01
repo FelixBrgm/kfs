@@ -1,12 +1,12 @@
 all:
-	cargo rustc --release -- --emit=obj
-	cargo run
-	# nasm -f elf64 multiboot_header.s
-	# ld --nmagic --output=kernel --script=linker.ld multiboot_header.o target/x86_64-unknown-none/release/deps/*.o -z noexecstack
-	# rm multiboot_header.o
-	# cp kernel iso/boot/kernel
-	# rm kernel
-	# grub-mkrescue -o kfs.iso ./iso
+	cargo build-kernel 
+	cargo build-iso
 	# qemu-system-x86_64 -cdrom kfs.iso -boot d -nographic
+
+fclean:
+	cargo clean
+	rm ./iso/boot/kernel
+	rm kernel.iso
+	find . -name multiboot_header.o -delete
 
 .PHONY: all

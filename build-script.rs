@@ -1,27 +1,28 @@
 use core::convert::From;
 use std::env;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Command;
 
 fn main() {
     let out_dir = env::var("OUT_DIR").unwrap();
     let multiboot_object_file = format!("{}/multiboot_header.o", out_dir);
 
-    assemble_multiboot_header(&multiboot_object_file);
-    link(&multiboot_object_file);
+    nasm(&multiboot_object_file);
+    ld(&multiboot_object_file);
+    mkrescue();
 }
 
-fn compile_kernel() {
-    let status = Command::new("cargo")
-        .args(&["rustc", "--release", "--", "--emit=obj"])
+fn mkrescue() {
+    let status = Command::new("grub-mkrescue")
+        .args(&["-o", "kernel.iso", "./iso"])
         .status()
-        .expect("could not emit object files for kfs");
+        .expect("could not create kernel iso");
     if !status.success() {
-        panic!("could not create kernel object file")
+        panic!("grub-mkrescue could not build kernel iso")
     }
 }
 
-fn assemble_multiboot_header(multiboot_object_file: &str) {
+fn nasm(multiboot_object_file: &str) {
     let status = Command::new("nasm")
         .args(&[
             "-f",
@@ -38,7 +39,7 @@ fn assemble_multiboot_header(multiboot_object_file: &str) {
     println!("cargo:rerun-if-changed=multiboot_header.s");
 }
 
-fn link(multiboot_object_file: &str) {
+fn ld(multiboot_object_file: &str) {
     let target_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap())
         .join("target")
         .join("x86_64-unknown-none")
@@ -62,7 +63,7 @@ fn link(multiboot_object_file: &str) {
     let status = Command::new("ld")
         .args(&[
             "--nmagic",
-            "--output=kernel",
+            "--output=./iso/boot/kernel",
             "--script=linker.ld",
             &multiboot_object_file,
             obj_file.to_str().unwrap(),

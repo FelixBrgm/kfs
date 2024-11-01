@@ -5,8 +5,9 @@ build-std = ["core"]
 target = "x86_64-unknown-none"
 
 [target.'cfg(target_os = "none")']
-runner = "qemu-system-x86_64 -cdrom kfs.iso -boot d -nographic"
+runner = "qemu-system-x86_64 -cdrom kernel.iso -boot d -nographic"
 
 [alias]
+run-kernel = "run --release"
 build-kernel = "rustc --release --no-default-features -- --emit=obj"
-build = "build --release"
+build-iso = "build --release"
