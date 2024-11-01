@@ -3,6 +3,10 @@ name = "kfs"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = ["build-script"]
+build-script = []
+
 [profile.dev]
 panic = "abort"
 
