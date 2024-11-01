@@ -24,7 +24,7 @@ fn mkrescue() {
 
 fn nasm(multiboot_object_file: &str) {
     let status = Command::new("nasm")
-        .args(&[
+        .args([
             "-f",
             "elf64",
             "multiboot_header.s",
@@ -61,11 +61,11 @@ fn ld(multiboot_object_file: &str) {
         .expect("no object file found in deps directory");
 
     let status = Command::new("ld")
-        .args(&[
+        .args([
             "--nmagic",
             "--output=./iso/boot/kernel",
             "--script=linker.ld",
-            &multiboot_object_file,
+            multiboot_object_file,
             obj_file.to_str().unwrap(),
             "-z",
             "noexecstack",

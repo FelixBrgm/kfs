@@ -2,10 +2,10 @@
 build-std = ["core"]
 
 [build]
-target = "x86_64-unknown-none"
+target = "targets/i386-target.json"
 
 [target.'cfg(target_os = "none")']
-runner = "qemu-system-x86_64 -cdrom kernel.iso -boot d -nographic"
+runner = "qemu-system-i386 -cdrom kernel.iso -boot d -nographic"
 
 [alias]
 run-kernel = "run --release"

@@ -3,12 +3,17 @@ name = "kfs"
 version = "0.1.0"
 edition = "2021"
 
-[features]
-default = ["build-script"]
-build-script = []
+[build]
+target = "targets/i386-target.json"
+
+[target.'cfg(target_arch = "x86")']
+rustflags = ["-Zbuild-std=core,alloc", "--target", "targets/i386-target.json"]
+linker = "rust-lld"
 
 [profile.dev]
 panic = "abort"
+test = false
 
 [profile.release]
 panic = "abort"
+test = false
