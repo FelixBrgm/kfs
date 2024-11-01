@@ -4,4 +4,3 @@ kfs.iso
 iso/boot/kernel
 *.o
 kernel
-Cargo.lock
