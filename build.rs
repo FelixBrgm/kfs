@@ -8,6 +8,7 @@ fn main() {
     let multiboot_object_file = format!("{}/multiboot_header.o", out_dir);
 
     assemble_multiboot_header(&multiboot_object_file);
+    link(&multiboot_object_file);
 }
 
 fn assemble_multiboot_header(multiboot_object_file: &str) {
