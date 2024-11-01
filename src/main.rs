@@ -27,7 +27,7 @@ enum VGAColor {
 
 const VGA_WIDTH: u8 = 80;
 const VGA_HEIGHT: u8 = 25;
-const VGA_BUFFER: *mut u16 = 0xB82000 as *mut u16;
+const VGA_BUFFER: *mut u16 = 0xB8000 as *mut u16;
 
 struct Terminal {
     color: u8,
@@ -122,8 +122,21 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 
 #[no_mangle]
-pub extern "C" fn kernel_main() -> ! {
+pub extern "C" fn kernel_main() {
+    let mut terminal = Terminal::new();
+
+    terminal.putchar(b'H');
+    terminal.putchar(b'e');
+    terminal.putchar(b'l');
+    terminal.putchar(b'l');
+    terminal.putchar(b'o');
+    terminal.putchar(b',');
+    terminal.putchar(b' ');
+    terminal.putchar(b'W');
+    terminal.putchar(b'o');
+    terminal.putchar(b'r');
+    terminal.putchar(b'l');
+    terminal.putchar(b'd');
+    terminal.putchar(b'!');
     loop {}
 }
-
-fn main() {}
