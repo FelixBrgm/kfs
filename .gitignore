@@ -1,6 +1,6 @@
 # BUILD
 target/
-kfs.iso
+kernel.iso
 iso/boot/kernel
 *.o
 kernel
