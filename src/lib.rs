@@ -123,11 +123,11 @@ fn panic(_info: &PanicInfo) -> ! {
 pub extern "C" fn kernel_main() {
     let mut terminal = Terminal::new();
 
-    terminal.putchar(b'P');
+    terminal.putchar(b'H');
     terminal.putchar(b'e');
-    terminal.putchar(b'n');
-    terminal.putchar(b'i');
-    terminal.putchar(b's');
+    terminal.putchar(b'l');
+    terminal.putchar(b'l');
+    terminal.putchar(b'o');
     terminal.putchar(b',');
     terminal.putchar(b' ');
     terminal.putchar(b'W');

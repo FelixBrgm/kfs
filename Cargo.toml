@@ -3,8 +3,5 @@ name = "kfs"
 version = "0.1.0"
 edition = "2021"
 
-[build]
-target = "i386-unknown-none.json"
-
 [lib]
 crate-type = ["staticlib"]
