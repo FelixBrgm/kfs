@@ -33,7 +33,7 @@ iso: all
 	grub-mkrescue -v -o $(BUILD_DIR)/$(NAME).iso $(BUILD_DIR)/iso 
 
 cdrom:
-	 qemu-system-i386 -cdrom $(BUILD_DIR)/$(NAME).iso -m 1024M -boot d
+	qemu-system-i386 -cdrom $(BUILD_DIR)/$(NAME).iso -boot d -nographic
 
 fclean:
 	cargo clean
