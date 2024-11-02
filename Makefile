@@ -30,16 +30,14 @@ iso: all
 	mkdir -p $(BUILD_DIR)/iso/boot/grub
 	cp grub.cfg $(BUILD_DIR)/iso/boot/grub
 	cp $(BUILD_DIR)/kernel.bin $(BUILD_DIR)/iso/boot/
-	grub-mkrescue -o $(BUILD_DIR)/$(NAME).iso $(BUILD_DIR)/iso
+	grub-mkrescue -v -o $(BUILD_DIR)/$(NAME).iso $(BUILD_DIR)/iso 
 
 cdrom:
-	qemu-system-i386 -cdrom $(BUILD_DIR)/$(NAME).iso
+	 qemu-system-i386 -cdrom $(BUILD_DIR)/$(NAME).iso -m 1024M -boot d
 
 fclean:
 	cargo clean
 	$(RM) -rf $(BUILD_DIR)
-
-
 
 re: fclean all
 
