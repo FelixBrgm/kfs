@@ -1,13 +1,2 @@
-[unstable]
-build-std = ["core"]
-
-[build]
-target = "i386-unknown-none.json"
-
-[target.'cfg(target_os = "none")']
-runner = "qemu-system-i386 -cdrom kernel.iso -boot d -nographic"
-
 [alias]
-run-kernel = "run --release"
-build-kernel = "rustc --release --no-default-features -- --emit=obj"
-build-iso = "build --release"
+build-kernel = "build -Z build-std=core,alloc --target=i386-unknown-none.json --release"

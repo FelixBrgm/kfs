@@ -25,8 +25,8 @@ enum VGAColor {
     White = 15,
 }
 
-const VGA_WIDTH: u8 = 80;
-const VGA_HEIGHT: u8 = 25;
+const VGA_WIDTH: u16 = 80;
+const VGA_HEIGHT: u16 = 25;
 const VGA_BUFFER: *mut u16 = 0xB8000 as *mut u16;
 
 struct Terminal {
@@ -36,8 +36,6 @@ struct Terminal {
     buf: *mut u16,
 }
 
-/// # Safety
-/// This function assumes that
 unsafe fn strlen(s: *mut u16) -> isize {
     let mut len: isize = 0;
 
@@ -84,7 +82,7 @@ impl Terminal {
     }
 
     fn put_entry_at(&mut self, c: u8, col: u8, row: u8) {
-        let index = row * VGA_WIDTH + col;
+        let index = row * VGA_WIDTH as u8 + col;
         unsafe { *self.buf.offset(index as isize) = vga_entry(c, self.color) }
     }
 
@@ -125,11 +123,11 @@ fn panic(_info: &PanicInfo) -> ! {
 pub extern "C" fn kernel_main() {
     let mut terminal = Terminal::new();
 
-    terminal.putchar(b'H');
+    terminal.putchar(b'P');
     terminal.putchar(b'e');
-    terminal.putchar(b'l');
-    terminal.putchar(b'l');
-    terminal.putchar(b'o');
+    terminal.putchar(b'n');
+    terminal.putchar(b'i');
+    terminal.putchar(b's');
     terminal.putchar(b',');
     terminal.putchar(b' ');
     terminal.putchar(b'W');

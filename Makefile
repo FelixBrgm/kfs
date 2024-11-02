@@ -1,12 +1,46 @@
-all:
-	cargo build-kernel 
-	cargo build-iso
-	# qemu-system-x86_64 -cdrom kfs.iso -boot d -nographic
+SRC_DIR := src
+OBJ_DIR := obj
+BUILD_DIR := build
+NAME := kernel
+BINARY := $(NAME).bin
+ISO := $(NAME).iso
+MULTIBOOT_HEADER := boot.s
+MULTIBOOT_HEADER_OBJ := boot.o
+
+LIB := target/i386-unknown-none/release/libkfs.a
+
+all: $(BUILD_DIR)/$(BINARY)
+
+$(BUILD_DIR)/$(BINARY): $(BUILD_DIR)/$(MULTIBOOT_HEADER_OBJ) $(LIB)
+	ld -m elf_i386 -T linker.ld -o $@ $^
+
+$(BUILD_DIR)/$(MULTIBOOT_HEADER_OBJ): $(MULTIBOOT_HEADER) | $(BUILD_DIR)
+	as --32 -o $@ $<
+
+$(LIB): $(wildcard *.rs)
+	cargo build-kernel
+
+$(BUILD_DIR):
+	mkdir -p $@
+
+run:
+	qemu-system-i386 -kernel $(BUILD_DIR)/$(BINARY)
+
+iso: all 
+	mkdir -p $(BUILD_DIR)/iso/boot/grub
+	cp grub.cfg $(BUILD_DIR)/iso/boot/grub
+	cp $(BUILD_DIR)/kernel.bin $(BUILD_DIR)/iso/boot/
+	grub-mkrescue -o $(BUILD_DIR)/$(NAME).iso $(BUILD_DIR)/iso
+
+cdrom:
+	qemu-system-i386 -cdrom $(BUILD_DIR)/$(NAME).iso
 
 fclean:
 	cargo clean
-	rm ./iso/boot/kernel
-	rm kernel.iso
-	find . -name multiboot_header.o -delete
+	$(RM) -rf $(BUILD_DIR)
 
-.PHONY: all
+
+
+re: fclean all
+
+.PHONY: all run re fclean iso cdrom

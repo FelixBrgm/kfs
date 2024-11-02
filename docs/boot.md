@@ -2,7 +2,7 @@
 The **GR**and **U**nified **B**ootloader implements a specification called Multiboot, which is a set of conventions for how a kernel should get loaded into memory. By following its specifications, we can let GRUB load our kernel.
 We achieve this using something called a "header". It contains information following the Multiboot format, which GRUB will read and follow.
 ### Multiboot Header 
-`multiboot_header.s`:
+`boot.s`:
 ```asm
 section .multiboot_header
 

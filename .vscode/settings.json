@@ -1,4 +1,10 @@
 {
     "rust-analyzer.checkOnSave": true,
-    "rust-analyzer.cargo.noDefaultFeatures": true
+    "rust-analyzer.cargo.noDefaultFeatures": true,
+    "rust-analyzer.cargo.target": "targets/i386-target.json",
+    "rust-analyzer.check.allTargets": false,
+    "rust-analyzer.check.extraArgs": [
+        "--target",
+        "targets/i386-target.json"
+    ]
 }

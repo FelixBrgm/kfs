@@ -1,4 +1,3 @@
-/* kernel entrypoint */
 ENTRY (_start)
 
 
