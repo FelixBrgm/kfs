@@ -91,4 +91,12 @@ impl Buffer {
             }
         }
     }
+
+    pub fn putstr(&mut self, data: &str) {
+        for b in data.as_bytes() {
+            unsafe {
+                self.putchar(*b);
+            }
+        }
+    }
 }
