@@ -14,7 +14,9 @@
             "settings": {
                 "terminal.integrated.shell.linux": "/bin/bash"
             },
-            "extensions": []
+            "extensions": [
+                "tamasfe.even-better-toml"
+            ]
         }
     },
     "workspaceFolder": "/workspaces/kfs"
