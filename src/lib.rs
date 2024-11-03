@@ -2,11 +2,11 @@
 #![no_std]
 
 #[cfg(test)]
-fn main() { }
+fn main() {}
 
+pub mod gdt;
 pub mod idt;
 pub mod vga;
-pub mod gdt;
 
 use core::{panic::PanicInfo, ptr};
 

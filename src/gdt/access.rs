@@ -1,52 +1,51 @@
-#[derive(PartialEq,Clone, Copy)]
-#[repr(u8)]            
+#[derive(PartialEq, Clone, Copy)]
+#[repr(u8)]
 pub enum Presence {
     Invalid = 0,
-    Valid = 1
+    Valid = 1,
 }
 
-#[derive(PartialEq,Clone, Copy)]
-#[repr(u8)]            
+#[derive(PartialEq, Clone, Copy)]
+#[repr(u8)]
 pub enum DescriptorPriviledgeLevel {
     Lvl0 = 0,
     Lvl1 = 1,
     Lvl2 = 2,
     Lvl3 = 3,
 }
-#[derive(PartialEq,Clone, Copy)]
-#[repr(u8)]            
+#[derive(PartialEq, Clone, Copy)]
+#[repr(u8)]
 pub enum SegmentType {
     System = 0,
-    CodeOrData = 1
+    CodeOrData = 1,
 }
 
-#[repr(u8)]            
-#[derive(PartialEq,Clone, Copy)]
+#[repr(u8)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum ExecutabilityType {
     Data = 0,
-    Code = 1
+    Code = 1,
 }
 
-
-#[repr(u8)]            
-#[derive(PartialEq,Clone, Copy)]
+#[repr(u8)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum Direction {
     GrowsUp = 0,
-    GrowsDown = 1
+    GrowsDown = 1,
 }
 
-#[repr(u8)]            
-#[derive(PartialEq,Clone, Copy)]
+#[repr(u8)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum ReadWriteAble {
     Clear = 0,
-    Set = 1
+    Set = 1,
 }
 
-#[repr(u8)]            
-#[derive(PartialEq,Clone, Copy)]
+#[repr(u8)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum AccessBit {
     OnlyForSpecial = 0,
-    Default = 1
+    Default = 1,
 }
 
 pub struct Access {
@@ -56,7 +55,7 @@ pub struct Access {
     e: ExecutabilityType,
     dc: Direction,
     rw: ReadWriteAble,
-    a: AccessBit
+    a: AccessBit,
 }
 
 impl Access {
