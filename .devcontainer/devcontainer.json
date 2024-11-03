@@ -14,7 +14,9 @@
             "settings": {
                 "terminal.integrated.shell.linux": "/bin/bash"
             },
-            "extensions": []
+            "extensions": [
+                "rust-lang.rust-analyzer"
+            ]
         }
     },
     "workspaceFolder": "/workspaces/kfs"
