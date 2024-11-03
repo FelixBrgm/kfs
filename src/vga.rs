@@ -35,7 +35,7 @@ const VGA_WIDTH: u8 = 80;
 const VGA_HEIGHT: u8 = 25;
 const VGA_BUFFER_ADDR: *mut u16 = 0xB8000 as *mut u16;
 
-pub struct  OutOffBoundsError;
+pub struct OutOffBoundsError;
 
 pub struct Buffer {
     color: u8,
@@ -46,7 +46,7 @@ impl Buffer {
     pub fn new() -> Self {
         let mut buffer = Buffer {
             color: 0,
-            buf: VGA_BUFFER_ADDR
+            buf: VGA_BUFFER_ADDR,
         };
         buffer.set_colors(VGAColor::White, VGAColor::Black);
         buffer
@@ -55,7 +55,7 @@ impl Buffer {
     pub fn set_colors(&mut self, foreground: VGAColor, background: VGAColor) {
         self.color = foreground.to_foreground() | background.to_background()
     }
-    
+
     pub fn set_foreground_color(&mut self, foreground: VGAColor) {
         self.color = self.color & 0xF0;
         self.color |= foreground.to_foreground();
@@ -66,8 +66,12 @@ impl Buffer {
         self.color |= background.to_background();
     }
 
-    pub fn write_char_at(&self, row: u8, column: u8, character: u8) -> Result<(), OutOffBoundsError>  {
-
+    pub fn write_char_at(
+        &self,
+        row: u8,
+        column: u8,
+        character: u8,
+    ) -> Result<(), OutOffBoundsError> {
         if row >= VGA_HEIGHT || column >= VGA_WIDTH {
             return Err(OutOffBoundsError);
         }
