@@ -49,4 +49,4 @@ fclean:
 
 re: fclean all
 
-.PHONY: all run re fclean iso
+.PHONY: all run re fclean iso debug
