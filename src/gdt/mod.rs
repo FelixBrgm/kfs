@@ -8,6 +8,7 @@ pub use flag::*;
 
 #[cfg(test)]
 mod test {
+    // testcased from https://wiki.osdev.org/GDT_Tutorial
     use super::*;
 
     #[test]
