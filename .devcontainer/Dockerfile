@@ -17,12 +17,14 @@ RUN apt-get update && apt-get install -y \
 	grub-efi-amd64-bin \
 	qemu \
 	qemu-system-x86 \
-	&& rm -rf /var/lib/apt/lists/*
+	zsh \
+	&& rm -rf /var/lib/apt/lists/* 
 
-# RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
 
-# RUN echo 'source $HOME/.cargo/env' >> $HOME/.bashrc
-# RUN /bin/bash -c "source $HOME/.cargo/env && rustup target add x86_64-unknown-none"
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" -y
+
+COPY .devcontainer/.zshrc /root/.zshrc
+
 RUN rustup target add x86_64-unknown-none
 
 RUN rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu
