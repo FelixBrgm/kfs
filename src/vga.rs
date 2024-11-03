@@ -1,3 +1,5 @@
+use core::error::Error;
+
 #[repr(u8)]
 #[derive(Debug, Clone, Copy)]
 pub enum VGAColor {
@@ -19,83 +21,69 @@ pub enum VGAColor {
     White = 15,
 }
 
-const VGA_WIDTH: u16 = 80;
-const VGA_HEIGHT: u16 = 25;
-const VGA_BUFFER: *mut u16 = 0xB8000 as *mut u16;
+impl VGAColor {
+    pub fn to_foreground(&self) -> u8 {
+        *self as u8
+    }
+
+    pub fn to_background(&self) -> u8 {
+        (*self as u8) << 4
+    }
+}
+
+const VGA_WIDTH: u8 = 80;
+const VGA_HEIGHT: u8 = 25;
+const VGA_BUFFER_ADDR: *mut u16 = 0xB8000 as *mut u16;
+
+pub struct  OutOffBoundsError;
 
 pub struct Buffer {
     color: u8,
-    row: usize,
-    col: usize,
     buf: *mut u16,
-}
-
-fn vga_entry_color(foreground: VGAColor, background: VGAColor) -> u8 {
-    (foreground as u8) | (background as u8) << 4
-}
-
-fn vga_entry(c: u8, color: u8) -> u16 {
-    (c as u16) | (color as u16) << 8
 }
 
 impl Buffer {
     pub fn new() -> Self {
         let mut buffer = Buffer {
-            color: vga_entry_color(VGAColor::LightGrey, VGAColor::Black),
-            row: 0,
-            col: 0,
-            buf: 0xB8000 as *mut u16,
+            color: 0,
+            buf: VGA_BUFFER_ADDR
         };
-        buffer.clear_screen();
+        buffer.set_colors(VGAColor::White, VGAColor::Black);
         buffer
     }
 
+    pub fn set_colors(&mut self, foreground: VGAColor, background: VGAColor) {
+        self.color = foreground.to_foreground() | background.to_background()
+    }
+    
+    pub fn set_foreground_color(&mut self, foreground: VGAColor) {
+        self.color = self.color & 0xF0;
+        self.color |= foreground.to_foreground();
+    }
+
+    pub fn set_background_color(&mut self, background: VGAColor) {
+        self.color = self.color & 0x0F;
+        self.color |= background.to_background();
+    }
+
+    pub fn write_char_at(&self, row: u8, column: u8, character: u8) -> Result<(), OutOffBoundsError>  {
+
+        if row >= VGA_HEIGHT || column >= VGA_WIDTH {
+            return Err(OutOffBoundsError);
+        }
+        let entry: u16 = (character as u16) | (self.color as u16) << 8;
+        let index: isize = row as isize * VGA_WIDTH as isize + column as isize;
+        // Safety:
+        // The if statement above ensures that the index never goes out of the dedicated memory for the chars on screen
+        unsafe {
+            *self.buf.offset(index) = entry;
+        }
+        Ok(())
+    }
     pub fn clear_screen(&mut self) {
         for row in 0..VGA_HEIGHT {
             for col in 0..VGA_WIDTH {
-                // Safety:
-                // It is still way too early, I am not sure this is safe but I don't know how else to do it
-                unsafe {
-                    *self.buf.offset((row * VGA_WIDTH + col) as isize) = vga_entry(b' ', self.color)
-                }
-            }
-        }
-    }
-
-    pub fn set_color(&mut self, color: u8) {
-        self.color = color;
-    }
-
-    pub fn put_entry_at(&mut self, c: u8, col: u8, row: u8) {
-        let index = row * VGA_WIDTH as u8 + col;
-        unsafe { *self.buf.offset(index as isize) = vga_entry(c, self.color) }
-    }
-
-    pub fn putchar(&mut self, c: u8) {
-        self.put_entry_at(c, self.col as u8, self.row as u8);
-        self.col += 1;
-
-        if self.col >= VGA_WIDTH as usize {
-            self.col = 0;
-            self.row += 1;
-            if self.row >= VGA_HEIGHT as usize {
-                self.row = 0;
-            }
-        }
-    }
-
-    pub fn write(&mut self, data: *mut u16, size: isize) {
-        for idx in 0..size {
-            unsafe {
-                self.putchar(*data.offset(idx) as u8);
-            }
-        }
-    }
-
-    pub fn putstr(&mut self, data: &str) {
-        for b in data.as_bytes() {
-            unsafe {
-                self.putchar(*b);
+                self.write_char_at(row, col, b' ');
             }
         }
     }
