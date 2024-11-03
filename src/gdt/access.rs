@@ -88,7 +88,7 @@ impl Access {
         result |= (self.e as u8) << 3;
         result |= (self.dc as u8) << 2;
         result |= (self.rw as u8) << 1;
-        result |= (self.a as u8) << 0;
+        result |= (self.a as u8);
 
         result
     }

@@ -49,7 +49,7 @@ impl Flag {
         flag |= (self.data_protection_size as u8) << 2;
         flag |= (self.long_mode as u8) << 1;
 
-        flag = flag << 4; // Because the lower 4 bits are used by limit
+        flag <<= 4; // Because the lower 4 bits are used by limit
         flag
     }
 }

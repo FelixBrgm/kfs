@@ -42,6 +42,12 @@ pub struct Buffer {
     buf: *mut u16,
 }
 
+impl Default for Buffer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Buffer {
     pub fn new() -> Self {
         let mut buffer = Buffer {
@@ -57,12 +63,12 @@ impl Buffer {
     }
 
     pub fn set_foreground_color(&mut self, foreground: VGAColor) {
-        self.color = self.color & 0xF0;
+        self.color &= 0xF0;
         self.color |= foreground.to_foreground();
     }
 
     pub fn set_background_color(&mut self, background: VGAColor) {
-        self.color = self.color & 0x0F;
+        self.color &= 0x0F;
         self.color |= background.to_background();
     }
 

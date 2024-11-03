@@ -17,6 +17,7 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 
 #[no_mangle]
+#[allow(clippy::empty_loop)]
 pub extern "C" fn kernel_main() {
     let mut vga_buffer = vga::Buffer::new();
     vga_buffer.clear_screen();
