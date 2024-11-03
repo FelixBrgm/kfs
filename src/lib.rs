@@ -3,7 +3,6 @@
 
 #[cfg(test)]
 fn main() {}
-fn main() {}
 
 pub mod gdt;
 pub mod idt;
