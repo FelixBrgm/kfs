@@ -5,3 +5,4 @@ iso/boot/kernel
 *.o
 kernel
 build
+a.out
