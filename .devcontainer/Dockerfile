@@ -26,8 +26,8 @@ RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master
 COPY .zshrc /root/.zshrc
 
 RUN rustup target add x86_64-unknown-none
-
-RUN rustup component add rust-src
+RUN rustup default nightly
+RUN rustup component add rust-src 
 RUN rustup component add rustfmt
 
 RUN echo 'export PS1="\W> "' >> ~/.bashrc

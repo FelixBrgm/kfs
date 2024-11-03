@@ -8,6 +8,7 @@ pub mod vga;
 use core::{panic::PanicInfo, ptr};
 
 #[panic_handler]
+
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
