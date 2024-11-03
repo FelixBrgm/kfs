@@ -1,18 +1,23 @@
 #![allow(unused)]
 #![no_std]
-#![no_main]
 
+#[cfg(test)]
+fn main() {}
+
+pub mod gdt;
 pub mod idt;
 pub mod vga;
 
 use core::{panic::PanicInfo, ptr};
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
 #[no_mangle]
+#[allow(clippy::empty_loop)]
 pub extern "C" fn kernel_main() {
     let mut vga_buffer = vga::Buffer::new();
     vga_buffer.clear_screen();
@@ -21,8 +26,5 @@ pub extern "C" fn kernel_main() {
     vga_buffer.write_char_at(1, 0, b'4');
     vga_buffer.set_background_color(vga::VGAColor::Red);
     vga_buffer.write_char_at(2, 0, b'4');
-
     loop {}
 }
-
-fn main() {}
