@@ -1,12 +1,16 @@
 #![allow(unused)]
 #![no_std]
-#![no_main]
+
+#[cfg(test)]
+fn main() { }
 
 pub mod idt;
 pub mod vga;
+pub mod gdt;
 
 use core::{panic::PanicInfo, ptr};
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
@@ -23,5 +27,3 @@ pub extern "C" fn kernel_main() {
     vga_buffer.write_char_at(2, 0, b'4');
     loop {}
 }
-
-fn main() {}
