@@ -27,7 +27,7 @@ iso: all
 	mkdir -p $(BUILD_DIR)/iso/boot/grub
 	cp assets/grub.cfg $(BUILD_DIR)/iso/boot/grub
 	cp $(BUILD_DIR)/kernel.bin $(BUILD_DIR)/iso/boot/
-	grub-mkrescue -v -o $(BUILD_DIR)/$(NAME).iso $(BUILD_DIR)/iso 
+	grub-mkrescue -v -o $(BUILD_DIR)/$(NAME).iso $(BUILD_DIR)/iso --compress=xz
 
 run: iso
 	qemu-system-i386 -cdrom $(BUILD_DIR)/$(NAME).iso -boot d
