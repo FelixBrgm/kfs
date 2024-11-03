@@ -39,3 +39,14 @@ impl Entry {
         result 
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::gdt::{Access, DataProtectionSize, DescriptorPriviledgeLevel, Flag, Granularity, LongMode, Presence, SegmentType};
+
+    #[test]
+    fn test_gdt_code_pl0() {
+        let flag: Flag::new(LongMode::Other, DataProtectionSize::Segm32bit, Granularity::PageSize4K);
+        let access: Access::new(SegmentType::CodeOrData, Presence::Valid, DescriptorPriviledgeLevel::Lvl0);
+    }
+}
