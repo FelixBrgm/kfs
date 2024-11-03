@@ -1,4 +1,4 @@
-name: Cargo Build & Test
+name: cargo clippy -- -D warnings
 
 on:
   push:

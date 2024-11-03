@@ -1,4 +1,4 @@
-name: Cargo Build & Test
+name: cargo build-kernel && cargo test
 
 on:
   push:
