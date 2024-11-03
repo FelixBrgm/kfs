@@ -16,7 +16,7 @@ fn panic(_info: &PanicInfo) -> ! {
 pub extern "C" fn kernel_main() {
     let mut vga_buffer = vga::Buffer::new();
 
-    vga_buffer.putstr("42");
+    vga_buffer.putstr("42asdhasd");
     loop {}
 }
 

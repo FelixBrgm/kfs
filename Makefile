@@ -9,6 +9,9 @@ MULTIBOOT_HEADER_OBJ := boot.o
 
 LIB := target/i386-unknown-none/release/libkfs.a
 
+RUST_SRCS := $(shell find $(SRC_DIR) -type f -name "*.rs")
+CARGO_TOML := Cargo.toml
+
 all: $(BUILD_DIR)/$(BINARY)
 
 $(BUILD_DIR)/$(BINARY): $(BUILD_DIR)/$(MULTIBOOT_HEADER_OBJ) $(LIB)
@@ -17,8 +20,9 @@ $(BUILD_DIR)/$(BINARY): $(BUILD_DIR)/$(MULTIBOOT_HEADER_OBJ) $(LIB)
 $(BUILD_DIR)/$(MULTIBOOT_HEADER_OBJ): $(MULTIBOOT_HEADER) | $(BUILD_DIR)
 	as --32 -o $@ $<
 
-$(LIB):
+$(LIB): $(RUST_SRCS) $(CARGO_TOML)
 	cargo build-kernel
+	touch $(LIB)
 
 $(BUILD_DIR):
 	mkdir -p $@
