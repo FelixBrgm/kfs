@@ -36,10 +36,17 @@ iso: all
 run: iso
 	qemu-system-i386 -cdrom $(BUILD_DIR)/$(NAME).iso -boot d
 
+debug: all
+	mkdir -p $(BUILD_DIR)/iso/boot/grub
+	cp assets/grub.cfg $(BUILD_DIR)/iso/boot/grub
+	cp $(BUILD_DIR)/kernel.bin $(BUILD_DIR)/iso/boot/
+	grub-mkrescue -v -o $(BUILD_DIR)/$(NAME).iso $(BUILD_DIR)/iso
+	qemu-system-i386 -cdrom $(BUILD_DIR)/$(NAME).iso -boot d
+
 fclean:
 	cargo clean
 	$(RM) -rf $(BUILD_DIR)
 
 re: fclean all
 
-.PHONY: all run re fclean iso cdrom
+.PHONY: all run re fclean iso debug
