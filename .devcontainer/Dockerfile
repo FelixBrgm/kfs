@@ -23,10 +23,11 @@ RUN apt-get update && apt-get install -y \
 
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" -y
 
-COPY .devcontainer/.zshrc /root/.zshrc
+COPY .zshrc /root/.zshrc
 
 RUN rustup target add x86_64-unknown-none
 
-RUN rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu
+RUN rustup component add rust-src
+RUN rustup component add rustfmt
 
 RUN echo 'export PS1="\W> "' >> ~/.bashrc
