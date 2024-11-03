@@ -1,5 +1,6 @@
 // Do not move these, around, the order matters :)
 // https://wiki.osdev.org/Interrupt_Descriptor_Table
+#[repr(C, packed)]
 pub struct Entry {
     offset_1: u16,       // offset bits 0..15
     selector: u16,       // code segment selector
