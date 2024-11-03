@@ -23,16 +23,13 @@ $(LIB):
 $(BUILD_DIR):
 	mkdir -p $@
 
-run:
-	qemu-system-i386 -kernel $(BUILD_DIR)/$(BINARY)
-
 iso: all 
 	mkdir -p $(BUILD_DIR)/iso/boot/grub
 	cp assets/grub.cfg $(BUILD_DIR)/iso/boot/grub
 	cp $(BUILD_DIR)/kernel.bin $(BUILD_DIR)/iso/boot/
 	grub-mkrescue -v -o $(BUILD_DIR)/$(NAME).iso $(BUILD_DIR)/iso 
 
-cdrom:
+run: iso
 	qemu-system-i386 -cdrom $(BUILD_DIR)/$(NAME).iso -boot d
 
 fclean:
