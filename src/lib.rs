@@ -25,6 +25,6 @@ pub extern "C" fn kernel_main() {
     vga_buffer.set_foreground_color(vga::VGAColor::Blue);
     vga_buffer.write_char_at(1, 0, b'4');
     vga_buffer.set_background_color(vga::VGAColor::Red);
-    vga_buffer.write_char_at(2, 0, b'4');
+    vga_buffer.write_char_at(2, 0, b'7');
     loop {}
 }

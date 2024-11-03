@@ -7,7 +7,7 @@ pub enum Presence {
 
 #[derive(PartialEq, Clone, Copy)]
 #[repr(u8)]
-pub enum DescriptorPriviledgeLevel {
+pub enum DescriptorPrivilege {
     Lvl0 = 0,
     Lvl1 = 1,
     Lvl2 = 2,
@@ -50,7 +50,7 @@ pub enum AccessBit {
 
 pub struct Access {
     p: Presence,
-    dpl: DescriptorPriviledgeLevel,
+    dpl: DescriptorPrivilege,
     s: SegmentType,
     e: ExecutabilityType,
     dc: Direction,
@@ -61,7 +61,7 @@ pub struct Access {
 impl Access {
     pub fn new(
         p: Presence,
-        dpl: DescriptorPriviledgeLevel,
+        dpl: DescriptorPrivilege,
         s: SegmentType,
         e: ExecutabilityType,
         dc: Direction,

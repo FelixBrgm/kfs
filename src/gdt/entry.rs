@@ -1,4 +1,5 @@
-use super::{Access, Flag};
+use crate::gdt::access::Access;
+use crate::gdt::flag::Flag;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
