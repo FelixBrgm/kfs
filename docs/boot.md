@@ -4,34 +4,24 @@ We achieve this using something called a "header". It contains information follo
 ### Multiboot Header 
 `boot.s`:
 ```asm
-section .multiboot_header
+.set MB_MAGIC, 0x1BADB002						;      
+.set MB_FLAGS, 0
+.set MB_CHECKSUM, (0 - (MB_MAGIC + MB_FLAGS))
 
-header_start:
-
-	dd 0xe85250d6
-	dd 0 
-	dd header_end - header_start
-
-	dd 0x100000000 - (0xe85250d6 + 0 + (header_end - header_start))
-
-	dw 0
-	dw 0
-	dw 0
-
-header_end:
+.section .multiboot								
+	.align 4 
+	.long MB_MAGIC
+	.long MB_FLAGS
+	.long MB_CHECKSUM
 ```
 
-`section .multiboot_header`: 
-* Section annotation, needed by the linker to find the boot code.
+`section .multiboot_header`: Section annotation, needed by the linker to find the boot code.
 
-`header_start:` & `header_end:`: 
-* "labels", let us use a name to refer to a particular part of our code.
+`.set MB_MAGIC, 0x1BADB002`: 
+* `.set MB_MAGIC, `: 
+* `0x1BADB002`: The Multiboot specification requires this number be right at the start of the boot code. It is an arbitrary magic number - no need to think about it further.
 
-`dd 0xe85250d6`: 
-* `dd`: Short for "define double word" - one word is 16 bits (like in networking), therefore a double word is 32 bits. 
-* `0xe85250d6`: The Multiboot specification requires this number be right at the start of the boot code. It is an arbitrary magic number - no need to think about it further.
-
-`dd 0`:
+`.set MB_FLAGS, 0`:
 * `0`: Specifies the boot mode (protected).
 
 `dd header_end - header_start`:
