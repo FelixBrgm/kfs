@@ -17,20 +17,17 @@
 .section .bss			# .bss is used for all variables that are already declared but uninitialized - stack & global/static variables
 
 	.align 16			# Aligns further values so that - ADDR_OF_VAR % 4 == 0
-	stack_bottom:		# Saves the address into stack_bottom
-		.skip 4096		# .skip tells the assemler to not put something for 4096 bytes
+	.skip 4096		# .skip tells the assemler to not put something for 4096 bytes
 	stack_top:			# Saves the address into stack_top
 
  
 .section .text # start of the code
 	_start:		
-		mov $stack_top, %esp # set stackpointer to stack_top
+		mov $stack_top, %esp 	# set stackpointer to stack_top
 
-        push %eax
-        push %ebx
-		call kernel_main
+		call kernel_main		# call the rust kernel code
  
 		hang:
-			cli      
-			hlt      
-			jmp hang
+			cli      			# disable all interups	
+			hlt      			# halt - basically sleep and do nothing
+			jmp hang			# normally with interupts disabled hlt should never finish except for non-maskable interrupt occurring or due to system management mode
