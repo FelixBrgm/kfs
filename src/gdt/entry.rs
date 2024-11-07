@@ -34,7 +34,7 @@ impl Entry {
         }
     }
 
-    pub fn to_u64(&self) -> u64 {
+    pub fn to_bitmap_u64(&self) -> u64 {
         let mut result: u64 = 0;
 
         result |= (self.base_31_24 as u64) << 56;
@@ -69,7 +69,7 @@ mod test {
             ReadWriteAble::Set,
             AccessBit::OnlyForSpecial,
         );
-        let entry = Entry::new(0, 0x000FFFFF, flag, access).to_u64();
+        let entry = Entry::new(0, 0x000FFFFF, flag, access).to_bitmap_u64();
         assert_eq!(entry, 0x00CF9A000000FFFF)
     }
 
@@ -89,7 +89,7 @@ mod test {
             ReadWriteAble::Set,
             AccessBit::OnlyForSpecial,
         );
-        let entry = Entry::new(0, 0x000FFFFF, flag, access).to_u64();
+        let entry = Entry::new(0, 0x000FFFFF, flag, access).to_bitmap_u64();
         assert_eq!(entry, 0x00CF92000000FFFF)
     }
 
@@ -109,7 +109,7 @@ mod test {
             ReadWriteAble::Set,
             AccessBit::OnlyForSpecial,
         );
-        let entry = Entry::new(0, 0x000FFFFF, flag, access).to_u64();
+        let entry = Entry::new(0, 0x000FFFFF, flag, access).to_bitmap_u64();
         assert_eq!(entry, 0x00CFFA000000FFFF)
     }
 
@@ -129,7 +129,7 @@ mod test {
             ReadWriteAble::Set,
             AccessBit::OnlyForSpecial,
         );
-        let entry = Entry::new(0, 0x000FFFFF, flag, access).to_u64();
+        let entry = Entry::new(0, 0x000FFFFF, flag, access).to_bitmap_u64();
         assert_eq!(entry, 0x00CFF2000000FFFF)
     }
 }
