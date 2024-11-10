@@ -3,9 +3,9 @@
 
 mod gdt;
 mod idt;
+mod panic;
 mod print;
 mod vga;
-mod panic;
 
 pub use vga::*;
 
