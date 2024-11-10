@@ -53,7 +53,7 @@ fn panic(_info: &PanicInfo) -> ! {
 
 fn kernel_init() {
     unsafe { gdt::init() }
-    idt::init();
+    // idt::init();
 }
 
 #[cfg(test)]

@@ -43,6 +43,10 @@ debug: all
 	grub-mkrescue -v -o $(BUILD_DIR)/$(NAME).iso $(BUILD_DIR)/iso
 	qemu-system-i386 -cdrom $(BUILD_DIR)/$(NAME).iso -boot d
 
+test: all 
+	qemu-system-i386 -s -S -kernel build/kernel.bin -append "root=/dev/hda"
+
+
 fclean:
 	cargo clean
 	$(RM) -rf $(BUILD_DIR)
