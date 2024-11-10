@@ -22,12 +22,12 @@ pub enum Color {
 }
 
 impl Color {
-    pub fn to_foreground(&self) -> u8 {
-        *self as u8
+    pub fn to_foreground(self) -> u8 {
+        self as u8
     }
 
-    pub fn to_background(&self) -> u8 {
-        (*self as u8) << 4
+    pub fn to_background(self) -> u8 {
+        (self as u8) << 4
     }
 }
 
@@ -37,21 +37,21 @@ const VGA_BUFFER_ADDR: *mut u16 = 0xB8000 as *mut u16;
 
 pub struct OutOffBoundsError;
 
-pub struct VGA {
+pub struct Vga {
     color: u8,
     x: u8,
     y: u8,
 }
 
-impl Default for VGA {
+impl Default for Vga {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl VGA {
+impl Vga {
     pub fn new() -> Self {
-        let mut t = VGA {
+        let mut t = Vga {
             color: 0,
             x: 0,
             y: 0,
