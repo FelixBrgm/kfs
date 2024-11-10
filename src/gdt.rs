@@ -5,6 +5,7 @@ use super::*;
 static GDT_LIMIT: usize = 2048;
 static mut GDT: [u64; GDT_LIMIT] = [0; GDT_LIMIT];
 
+#[allow(static_mut_refs)]
 pub unsafe fn init() -> bool {
     GDT[0] = 0;
 
@@ -15,6 +16,7 @@ pub unsafe fn init() -> bool {
 
     let mut a: *const u32 = ptr::null_mut();
     // set DS to 0
+
     a = GDT.as_ptr() as *const u32;
     let mut e: u64 = (2048 << 32) | a as u64;
     let mut addr: *const u64 = &e;
