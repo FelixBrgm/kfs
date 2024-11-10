@@ -8,7 +8,7 @@ pub mod gdt;
 pub mod idt;
 pub mod terminal;
 
-fn u64_to_base(mut addr: u64, base: u8) -> Result<(usize, [u8; 65]), ()> {
+pub fn u64_to_base(mut addr: u64, base: u8) -> Result<(usize, [u8; 65]), ()> {
     if base < 2 || base > 16 {
         return Err(());
     }
@@ -38,10 +38,6 @@ fn u64_to_base(mut addr: u64, base: u8) -> Result<(usize, [u8; 65]), ()> {
 pub extern "C" fn kernel_main() {
     let a = kernel_init();
 
-    let mut terminal = Terminal::new();
-
-    terminal.clear_screen();
-    terminal.write_u8_arr("Hello World".as_bytes());
     loop {}
 }
 
@@ -55,8 +51,9 @@ fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
-fn kernel_init() -> bool {
+fn kernel_init() {
     unsafe { gdt::init() }
+    idt::init();
 }
 
 #[cfg(test)]

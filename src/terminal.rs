@@ -127,4 +127,10 @@ impl Terminal {
             self.write_char(*c);
         }
     }
+    pub fn new_line(&mut self) {
+        let current_row = self.y;
+        while current_row == self.y {
+            self.inc_cursor();
+        }
+    }
 }

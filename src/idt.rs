@@ -20,3 +20,7 @@ impl Entry {
         }
     }
 }
+
+pub fn init() {
+    
+}
