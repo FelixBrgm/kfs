@@ -31,6 +31,8 @@ impl Color {
     }
 }
 
+
+
 const VGA_WIDTH: u8 = 80;
 const VGA_HEIGHT: u8 = 25;
 const VGA_BUFFER_ADDR: *mut u16 = 0xB8000 as *mut u16;

@@ -3,6 +3,7 @@
 .global _start
 .global stack_top
 .global GDT
+.global GDT_LIMIT
 
 
 .set MB_MAGIC, 0x1BADB002          
@@ -31,13 +32,12 @@
 		mov $stack_top, %esp
 	
 	_gdt:
-		xor   %eax, %eax
-		lea	  GDT, %eax 
-		mov   %eax, (gdtr + 2)
-		mov 3, %eax
-		mov   %eax, (gdtr)
-		LGDT  gdtr
-
+		xor		%eax, %eax
+		lea		GDT, %eax 
+		mov		%eax, (gdtr + 2)
+		mov 	GDT_LIMIT, %eax
+		mov		%eax, (gdtr)
+		LGDT	gdtr
 
         push %eax
         push %ebx
