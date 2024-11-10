@@ -2,6 +2,8 @@
 
 .global _start
 .global stack_top
+.global GDT
+.global GDT_LIMIT
 
 
 .set MB_MAGIC, 0x1BADB002          				# This magic number is used for validating the boot code - https://en.wikipedia.org/wiki/Magic_number_(programming)
@@ -20,12 +22,26 @@
 	.skip 4096		# .skip tells the assemler to not put something for 4096 bytes
 	stack_top:			# Saves the address into stack_top
 
- 
-.section .text # start of the code
-	_start:		
-		mov $stack_top, %esp 	# set stackpointer to stack_top
+.section .data
+	gdtr:	.word 0x0
+			.long 0x0
 
-		call kernel_main		# call the rust kernel code
+.section .text
+	_start:
+		mov $stack_top, %esp
+	
+	_gdt:
+		xor		%eax, %eax
+		lea		GDT, %eax 
+		mov		%eax, (gdtr + 2)
+		mov 	GDT_LIMIT, %eax
+		mov		%eax, (gdtr)
+		LGDT	gdtr
+
+        push %eax
+        push %ebx
+		cli
+		call kernel_main
  
 		hang:
 			cli      			# disable all interups	

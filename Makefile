@@ -36,21 +36,24 @@ iso: all
 run: iso
 	qemu-system-i386 -cdrom $(BUILD_DIR)/$(NAME).iso -boot d -curses
 
-debug: all
+debug-iso: all
 	mkdir -p $(BUILD_DIR)/iso/boot/grub
 	cp assets/grub.cfg $(BUILD_DIR)/iso/boot/grub
 	cp $(BUILD_DIR)/kernel.bin $(BUILD_DIR)/iso/boot/
 	grub-mkrescue -v -o $(BUILD_DIR)/$(NAME).iso $(BUILD_DIR)/iso
+
+debug: debug-iso
 	qemu-system-i386 -cdrom $(BUILD_DIR)/$(NAME).iso -boot d
 
+crash: debug-iso
+	qemu-system-i386 -cdrom $(BUILD_DIR)/$(NAME).iso -boot d -d int -no-reboot -no-shutdown
 
-
-debug_terminal: all
+test: all 
 	mkdir -p $(BUILD_DIR)/iso/boot/grub
 	cp assets/grub.cfg $(BUILD_DIR)/iso/boot/grub
 	cp $(BUILD_DIR)/kernel.bin $(BUILD_DIR)/iso/boot/
 	grub-mkrescue -v -o $(BUILD_DIR)/$(NAME).iso $(BUILD_DIR)/iso
-	qemu-system-i386 -cdrom $(BUILD_DIR)/$(NAME).iso -boot d -curses
+	qemu-system-i386 -s -S -kernel build/kernel.bin -append "root=/dev/hda"
 
 fclean:
 	cargo clean
