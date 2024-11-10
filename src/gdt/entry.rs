@@ -51,10 +51,10 @@ impl Entry {
 #[cfg(test)]
 mod test {
     // testcased from https://wiki.osdev.org/GDT_Tutorial
-    use super::*;
-
+    use crate::gdt::*;
     #[test]
     fn test_gdt_code_pl0() {
+        SegmentType::System
         let flag = Flag::new(
             Granularity::PageSize4K,
             DataProtectionSize::Segm32bit,
