@@ -2,6 +2,8 @@
 
 .global _start
 .global stack_top
+.global GDT
+.global GDT_end
 
 
 .set MB_MAGIC, 0x1BADB002          
@@ -25,20 +27,6 @@
 .section .text
 	_start:
 		mov $stack_top, %esp
-
-
-		gdtr DW 0 ; For limit storage
-			DD 0 ; For base storage
-
-		XOR   EAX, EAX
-		MOV   AX, DS
-		SHL   EAX, 4
-		ADD   EAX, ''GDT''
-		MOV   [gdtr + 2], eax
-		MOV   EAX, ''GDT_end''
-		SUB   EAX, ''GDT''
-		MOV   [gdtr], AX
-		LGDT  [gdtr]
 
         push %eax
         push %ebx
