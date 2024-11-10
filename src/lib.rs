@@ -20,7 +20,10 @@ fn panic(_info: &PanicInfo) -> ! {
 #[no_mangle]
 #[allow(clippy::empty_loop)]
 pub extern "C" fn kernel_main() {
-    idt::init();
+    let mut t = terminal::VGA::new();
+    t.clear_screen();
+    t.set_background_color(terminal::Color::LightMagenta);
+    t.write_u8_arr("du hund".as_bytes());
 
     loop {}
 }
