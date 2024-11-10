@@ -20,7 +20,6 @@ fn panic(_info: &PanicInfo) -> ! {
 #[no_mangle]
 #[allow(clippy::empty_loop)]
 pub extern "C" fn kernel_main() {
-    unsafe { gdt::init() };
     idt::init();
 
     loop {}
