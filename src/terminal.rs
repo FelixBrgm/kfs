@@ -59,6 +59,7 @@ impl Vga {
         };
         t.set_foreground_color(Color::White);
         t.set_background_color(Color::Black);
+        t.update_cursor(0, 0);
         t
     }
 
@@ -139,7 +140,7 @@ impl Vga {
             return;
         } else if on_first_col {
             self.x = VGA_WIDTH - 1;
-            self.y = cmp::min(self.y, 0);
+            self.y = cmp::max(self.y - 1, 0);
         } else {
             self.x -= 1;
         }
