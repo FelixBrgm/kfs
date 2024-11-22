@@ -99,7 +99,7 @@ impl Vga {
     pub fn clear_screen(&mut self) {
         for row in 0..VGA_HEIGHT {
             for col in 0..VGA_WIDTH {
-                self.write_char_at(row, col, b' ');
+                self.write_char_at(row, col, 0);
             }
         }
     }
