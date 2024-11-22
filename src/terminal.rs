@@ -45,26 +45,23 @@ pub struct Vga {
     cursor: Cursor,
 }
 
-impl Default for Vga {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 /// Abstraction for the ugliness behind updating the cursor.
+/// https://wiki.osdev.org/Text_Mode_Cursor
 #[derive(Clone, Copy)]
 pub struct Cursor {}
 
 impl Cursor {
     pub fn update(&self, x: usize, y: usize) {
-        assert!((x as u8) < VGA_WIDTH);
-        assert!((y as u8) < VGA_HEIGHT);
+        let out_of_bounds: bool = !(0..VGA_HEIGHT).contains(&(y as u8)) || !(0..VGA_WIDTH).contains(&(x as u8));
+        if out_of_bounds {
+            return;
+        }
 
         let pos = y * VGA_WIDTH as usize + x;
 
         // Safety:
-        // Inline-assembly is unsafe by design, but the runtime assertions
-        // above ensure we do not write outside of the VGA buffer cursor's bounds.
+        // Inline-assembly is unsafe by design, but the check above ensures
+        // we do not write outside of the VGA buffer cursor's bounds.
         unsafe {
             asm!(
                 "mov dx, 0x3D4",
@@ -85,6 +82,12 @@ impl Cursor {
                 out("al") _,
             );
         }
+    }
+}
+
+impl Default for Vga {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -176,7 +179,7 @@ impl Vga {
         let mut pos: isize = row as isize * VGA_WIDTH as isize;
 
         unsafe {
-            while *VGA_BUFFER_ADDR.offset(pos) != (0u16) | (self.color as u16) << 8 {
+            while *VGA_BUFFER_ADDR.offset(pos) != (self.color as u16) << 8 {
                 pos += 1;
             }
         }
