@@ -139,11 +139,12 @@ impl Vga {
         if on_first_col && on_first_row {
             return;
         } else if on_first_col {
-            self.x = VGA_WIDTH - 1;
             self.y = cmp::max(self.y - 1, 0);
+            self.x = self.get_row_pos_for_col(self.y as usize) as u8;
         } else {
             self.x -= 1;
         }
+
         self.update_cursor(self.x as usize, self.y as usize);
     }
 
@@ -156,7 +157,20 @@ impl Vga {
         if self.y >= VGA_HEIGHT {
             self.y = 0;
         }
+
         self.update_cursor(self.x as usize, self.y as usize);
+    }
+
+    fn get_row_pos_for_col(&self, row: usize) -> usize {
+        let mut pos: isize = row as isize * VGA_WIDTH as isize;
+
+        unsafe {
+            while *VGA_BUFFER_ADDR.offset(pos) != (0 as u16) | (self.color as u16) << 8 {
+                pos += 1;
+            }
+        }
+
+        pos as usize % VGA_WIDTH as usize
     }
 
     pub fn new_line(&mut self) {
