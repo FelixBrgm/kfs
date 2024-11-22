@@ -175,23 +175,28 @@ impl Vga {
         self.cursor.update(self.x as usize, self.y as usize);
     }
 
+    /// Gets the position of the last written character for `row`, to ensure the cursor returns
+    /// to the correct position when backspacing at `col == 0`.
     fn get_row_pos_for_col(&self, row: usize) -> usize {
         if !(0..VGA_HEIGHT).contains(&(row as u8)) {
             return 0;
         }
 
-        let mut pos: isize = row as isize * VGA_WIDTH as isize;
+        let mut pos: isize = row as isize * VGA_WIDTH as isize + (VGA_WIDTH as isize - 1);
 
         // Safety:
         // The above check ensures we stay within the bounds of the VGA buffer row-wise. Then,
         // the loop condition ensures we never read outside the bounds of the current row.
         unsafe {
-            while *VGA_BUFFER_ADDR.offset(pos) != (self.color as u16) << 8 && pos < VGA_WIDTH as isize {
-                pos += 1;
+            while pos >= row as isize * VGA_WIDTH as isize {
+                if (*VGA_BUFFER_ADDR.offset(pos) & 0xFF) != 0 {
+                    return pos as usize % VGA_WIDTH as usize;
+                }
+                pos -= 1;
             }
         }
 
-        pos as usize % VGA_WIDTH as usize
+        0
     }
 
     pub fn new_line(&mut self) {
@@ -210,5 +215,19 @@ impl Vga {
     pub fn set_background_color(&mut self, background: Color) {
         self.color &= 0x0F;
         self.color |= background.to_background();
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_new_vga() {
+        let v = Vga::new();
+
+        assert!(v.x == 0);
+        assert!(v.y == 0);
+        assert
     }
 }
