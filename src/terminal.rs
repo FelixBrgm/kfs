@@ -42,11 +42,49 @@ pub struct Vga {
     color: u8,
     x: u8,
     y: u8,
+    cursor: Cursor,
 }
 
 impl Default for Vga {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Abstraction for the ugliness behind updating the cursor.
+#[derive(Clone, Copy)]
+pub struct Cursor {}
+
+impl Cursor {
+    pub fn update(&self, x: usize, y: usize) {
+        assert!((x as u8) < VGA_WIDTH);
+        assert!((y as u8) < VGA_HEIGHT);
+
+        let pos = y * VGA_WIDTH as usize + x;
+
+        // Safety:
+        // Inline-assembly is unsafe by design, but the runtime assertions
+        // above ensure we do not write outside of the VGA buffer cursor's bounds.
+        unsafe {
+            asm!(
+                "mov dx, 0x3D4",
+                "mov al, 0x0F",
+                "out dx, al",
+                "inc dx",
+                "mov al, {low}",
+                "out dx, al",
+                "mov dx, 0x3D4",
+                "mov al, 0x0E",
+                "out dx, al",
+                "inc dx",
+                "mov al, {high}",
+                "out dx, al",
+                low = in(reg_byte) (pos & 0xFF) as u8,
+                high = in(reg_byte) ((pos >> 8) & 0xFF) as u8,
+                out("dx") _,
+                out("al") _,
+            );
+        }
     }
 }
 
@@ -56,10 +94,11 @@ impl Vga {
             color: 0,
             x: 0,
             y: 0,
+            cursor: Cursor {},
         };
         t.set_foreground_color(Color::White);
         t.set_background_color(Color::Black);
-        t.update_cursor(0, 0);
+        t.cursor.update(0, 0);
         t
     }
 
@@ -104,34 +143,6 @@ impl Vga {
         }
     }
 
-    fn update_cursor(&self, x: usize, y: usize) {
-        assert!((x as u8) < VGA_WIDTH);
-        assert!((y as u8) < VGA_HEIGHT);
-
-        let pos = y * VGA_WIDTH as usize + x;
-
-        unsafe {
-            asm!(
-                "mov dx, 0x3D4",
-                "mov al, 0x0F",
-                "out dx, al",
-                "inc dx",
-                "mov al, {low}",
-                "out dx, al",
-                "mov dx, 0x3D4",
-                "mov al, 0x0E",
-                "out dx, al",
-                "inc dx",
-                "mov al, {high}",
-                "out dx, al",
-                low = in(reg_byte) (pos & 0xFF) as u8,
-                high = in(reg_byte) ((pos >> 8) & 0xFF) as u8,
-                out("dx") _,
-                out("al") _,
-            );
-        }
-    }
-
     fn dec_cursor(&mut self) {
         let on_first_col = self.x == 0;
         let on_first_row = self.y == 0;
@@ -145,7 +156,7 @@ impl Vga {
             self.x -= 1;
         }
 
-        self.update_cursor(self.x as usize, self.y as usize);
+        self.cursor.update(self.x as usize, self.y as usize);
     }
 
     fn inc_cursor(&mut self) {
@@ -158,14 +169,14 @@ impl Vga {
             self.y = 0;
         }
 
-        self.update_cursor(self.x as usize, self.y as usize);
+        self.cursor.update(self.x as usize, self.y as usize);
     }
 
     fn get_row_pos_for_col(&self, row: usize) -> usize {
         let mut pos: isize = row as isize * VGA_WIDTH as isize;
 
         unsafe {
-            while *VGA_BUFFER_ADDR.offset(pos) != (0 as u16) | (self.color as u16) << 8 {
+            while *VGA_BUFFER_ADDR.offset(pos) != (0u16) | (self.color as u16) << 8 {
                 pos += 1;
             }
         }
@@ -178,7 +189,7 @@ impl Vga {
         while current_row == self.y {
             self.inc_cursor();
         }
-        self.update_cursor(self.x as usize, self.y as usize);
+        self.cursor.update(self.x as usize, self.y as usize);
     }
 
     pub fn set_foreground_color(&mut self, foreground: Color) {
