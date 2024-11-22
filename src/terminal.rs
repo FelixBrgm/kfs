@@ -176,10 +176,17 @@ impl Vga {
     }
 
     fn get_row_pos_for_col(&self, row: usize) -> usize {
+        if !(0..VGA_HEIGHT).contains(&(row as u8)) {
+            return 0;
+        }
+
         let mut pos: isize = row as isize * VGA_WIDTH as isize;
 
+        // Safety:
+        // The above check ensures we stay within the bounds of the VGA buffer row-wise. Then,
+        // the loop condition ensures we never read outside the bounds of the current row.
         unsafe {
-            while *VGA_BUFFER_ADDR.offset(pos) != (self.color as u16) << 8 {
+            while *VGA_BUFFER_ADDR.offset(pos) != (self.color as u16) << 8 && pos < VGA_WIDTH as isize {
                 pos += 1;
             }
         }
