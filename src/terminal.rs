@@ -1,4 +1,4 @@
-use core::error::Error;
+use core::{arch::asm, cmp, error::Error};
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy)]
@@ -31,12 +31,13 @@ impl Color {
     }
 }
 
-const VGA_WIDTH: u8 = 80;
-const VGA_HEIGHT: u8 = 25;
+pub const VGA_WIDTH: u8 = 80;
+pub const VGA_HEIGHT: u8 = 25;
 const VGA_BUFFER_ADDR: *mut u16 = 0xB8000 as *mut u16;
 
 pub struct OutOffBoundsError;
 
+#[derive(Clone, Copy)]
 pub struct Vga {
     color: u8,
     x: u8,
@@ -64,6 +65,11 @@ impl Vga {
     pub fn write_char(&mut self, c: u8) {
         let _ = self.write_char_at(self.y, self.x, c);
         self.inc_cursor();
+    }
+
+    pub fn delete_char(&mut self) {
+        self.dec_cursor();
+        self.write_char_at(self.y, self.x, 0);
     }
 
     fn write_char_at(&self, row: u8, column: u8, character: u8) -> Result<(), OutOffBoundsError> {
@@ -97,6 +103,49 @@ impl Vga {
         }
     }
 
+    fn update_cursor(&self, x: usize, y: usize) {
+        assert!((x as u8) < VGA_WIDTH);
+        assert!((y as u8) < VGA_HEIGHT);
+
+        let pos = y * VGA_WIDTH as usize + x;
+
+        unsafe {
+            asm!(
+                "mov dx, 0x3D4",
+                "mov al, 0x0F",
+                "out dx, al",
+                "inc dx",
+                "mov al, {low}",
+                "out dx, al",
+                "mov dx, 0x3D4",
+                "mov al, 0x0E",
+                "out dx, al",
+                "inc dx",
+                "mov al, {high}",
+                "out dx, al",
+                low = in(reg_byte) (pos & 0xFF) as u8,
+                high = in(reg_byte) ((pos >> 8) & 0xFF) as u8,
+                out("dx") _,
+                out("al") _,
+            );
+        }
+    }
+
+    fn dec_cursor(&mut self) {
+        let on_first_col = self.x == 0;
+        let on_first_row = self.y == 0;
+
+        if on_first_col && on_first_row {
+            return;
+        } else if on_first_col {
+            self.x = VGA_WIDTH - 1;
+            self.y = cmp::min(self.y, 0);
+        } else {
+            self.x -= 1;
+        }
+        self.update_cursor(self.x as usize, self.y as usize);
+    }
+
     fn inc_cursor(&mut self) {
         self.x += 1;
         if self.x >= VGA_WIDTH {
@@ -106,6 +155,7 @@ impl Vga {
         if self.y >= VGA_HEIGHT {
             self.y = 0;
         }
+        self.update_cursor(self.x as usize, self.y as usize);
     }
 
     pub fn new_line(&mut self) {
@@ -113,6 +163,7 @@ impl Vga {
         while current_row == self.y {
             self.inc_cursor();
         }
+        self.update_cursor(self.x as usize, self.y as usize);
     }
 
     pub fn set_foreground_color(&mut self, foreground: Color) {
