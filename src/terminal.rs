@@ -227,6 +227,7 @@ impl Vga {
                 if (*self.get_buffer_addr().offset(pos) & 0xFF) != 0 {
                     return pos as usize % VGA_WIDTH as usize;
                 }
+
                 pos -= 1;
             }
         }
@@ -265,10 +266,39 @@ mod test {
     fn test_new_vga() {
         let v = Vga::new();
 
-        assert!(v.x == 0);
-        assert!(v.y == 0);
+        assert_eq!(v.x, 0, "Vga::x should be initialized to 0");
+        assert_eq!(v.y, 0, "Vga::x should be initialized to 0");
 
         let expected_color = Color::Black.to_background() | Color::White.to_foreground();
-        assert!(v.color == expected_color);
+        assert_eq!(
+            v.color, expected_color,
+            "Vga::color should be initialized to Color::Black.to_background() | Color::White.to_foreground()"
+        );
+    }
+
+    #[test]
+    fn test_line_wrap() {
+        let mut v = Vga::new();
+
+        for col in 0..VGA_WIDTH {
+            v.inc_cursor();
+        }
+
+        assert_eq!(v.x, 0, "Vga::x should wrap around when reaching 64");
+    }
+
+    #[test]
+    fn test_backspace_line_start() {
+        let mut v = Vga::new();
+
+        v.write_u8_arr(b"Hello, World");
+        v.new_line();
+        v.delete_char();
+
+        assert_eq!(v.y, 0, "Vga::y should decrease by 1 when deleting a character at the beginning of a line");
+        assert_eq!(
+            v.x, 11,
+            "Vga::x should return to the last written non-null character of the previous line when deleting a line"
+        );
     }
 }
