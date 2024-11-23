@@ -37,6 +37,8 @@ impl Color {
 
 pub const VGA_WIDTH: u8 = 80;
 pub const VGA_HEIGHT: u8 = 25;
+pub const VGA_BUFFER_SIZE: u16 = (VGA_WIDTH as u16) * (VGA_HEIGHT as u16);
+pub const MAX_BUFFERED_LINES: u8 = 100;
 
 #[cfg(test)]
 static mut VGA_BUFFER_ADDR: [u16; VGA_WIDTH as usize * VGA_HEIGHT as usize] = [0; VGA_WIDTH as usize * VGA_HEIGHT as usize];
@@ -125,6 +127,36 @@ impl Cursor {
     }
 }
 
+#[derive(Clone, Copy)]
+pub struct Buffer {
+    buf: [u16; (VGA_WIDTH as usize) * (MAX_BUFFERED_LINES as usize)],
+}
+
+impl Buffer {
+    pub fn new() -> Self {
+        Self {
+            buf: [0u16; (VGA_WIDTH as usize) * (MAX_BUFFERED_LINES as usize)],
+        }
+    }
+
+    pub fn write(&mut self, line_offset: u8, rel_index: u16, entry: u16) {
+        let abs_index: usize = (((line_offset as usize * VGA_WIDTH as usize) + rel_index as usize) % self.buf.len()) as usize;
+
+        self.buf[abs_index] = entry;
+    }
+
+    pub fn slice(&self, line_offset: u8) -> [u16; VGA_BUFFER_SIZE as usize] {
+        let start = (line_offset as usize) * (VGA_WIDTH as usize);
+        let end = start + VGA_BUFFER_SIZE as usize;
+
+        let mut result = [0u16; VGA_BUFFER_SIZE as usize];
+
+        result.copy_from_slice(&self.buf[start..end]);
+
+        result
+    }
+}
+
 #[allow(unused)]
 #[derive(Clone, Copy)]
 /// Abstraction for VGA buffer interactions.
@@ -133,6 +165,8 @@ pub struct Vga {
     x: u8,
     y: u8,
     cursor: Cursor,
+    buffer: Buffer,
+    line_offset: u8,
 }
 
 impl Default for Vga {
@@ -148,6 +182,8 @@ impl Vga {
             x: 0,
             y: 0,
             cursor: Cursor {},
+            buffer: Buffer::new(),
+            line_offset: 0,
         };
 
         t.set_foreground_color(Color::White);
@@ -197,15 +233,19 @@ impl Vga {
 
     /// Moves `self.y` to `self.y + 1` and `self.x` to `0`, and updates the cursor.
     pub fn new_line(&mut self) {
-        let current_row = self.y;
-        while current_row == self.y {
-            self.inc_cursor();
+        self.y += 1;
+        self.x = 0;
+
+        if self.y >= VGA_HEIGHT {
+            self.scroll();
         }
 
         #[cfg(not(test))]
         unsafe {
             self.cursor.update_pos(self.x as u16, self.y as u16);
         }
+
+        self.flush();
     }
 
     /// Sets the 4 most significant bits of `self.color` to `foreground`, setting the
@@ -236,19 +276,27 @@ impl Vga {
         }
     }
 
+    fn flush(&self) {
+        let current_displayed_content: [u16; VGA_BUFFER_SIZE as usize] = self.buffer.slice(self.line_offset);
+
+        for (idx, &entry) in current_displayed_content.iter().enumerate() {
+            unsafe {
+                write_volatile(self.get_buffer_addr().offset(idx as isize), entry);
+            }
+        }
+    }
+
     /// Writes `character` at `self.x == x` and `self.y == y` into the VGA buffer.
-    fn write_char_at(&self, y: u8, x: u8, character: u8) -> Result<(), OutOfBoundsError> {
+    fn write_char_at(&mut self, y: u8, x: u8, character: u8) -> Result<(), OutOfBoundsError> {
         if y >= VGA_HEIGHT || x >= VGA_WIDTH {
             return Err(OutOfBoundsError);
         }
         let entry: u16 = (character as u16) | (self.color as u16) << 8;
         let index: isize = y as isize * VGA_WIDTH as isize + x as isize;
 
-        // Safety:
-        // The if statement above ensures that the index never goes out of the dedicated memory for the chars on screen.
-        unsafe {
-            write_volatile(self.get_buffer_addr().offset(index), entry);
-        }
+        self.buffer.write(self.line_offset, index as u16, entry);
+
+        self.flush();
         Ok(())
     }
 
@@ -275,18 +323,36 @@ impl Vga {
     /// Increments the cursor, taking line wrapping into account.
     fn inc_cursor(&mut self) {
         self.x += 1;
+
         if self.x >= VGA_WIDTH {
             self.x = 0;
             self.y += 1;
         }
+
         if self.y >= VGA_HEIGHT {
-            self.y = 0;
+            self.scroll();
         }
 
         #[cfg(not(test))]
         unsafe {
             self.cursor.update_pos(self.x as u16, self.y as u16);
         }
+    }
+
+    fn scroll(&mut self) {
+        self.line_offset = (self.line_offset + 1) % MAX_BUFFERED_LINES;
+        self.y = VGA_HEIGHT - 1;
+        self.x = 0;
+
+        for x in 0..VGA_WIDTH {
+            self.buffer.write(
+                (self.line_offset + VGA_HEIGHT - 1) % MAX_BUFFERED_LINES,
+                x as u16,
+                (self.color as u16) << 8, // Write a space with the current color
+            );
+        }
+
+        self.flush();
     }
 
     /// Gets the position of the last written character for `row`, to ensure the cursor returns
