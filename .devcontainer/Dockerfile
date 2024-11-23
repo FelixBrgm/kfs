@@ -30,5 +30,6 @@ RUN rustup default nightly
 RUN rustup component add rust-src
 RUN rustup component add rustfmt
 RUN rustup component add clippy
+RUN cargo install cargo-valgrind
 
 RUN echo 'export PS1="\W> "' >> ~/.bashrc
