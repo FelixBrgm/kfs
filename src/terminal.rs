@@ -1,4 +1,5 @@
 use core::{alloc, arch::asm, cmp, error::Error, ptr::write_volatile};
+use serial_test::serial;
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy)]
@@ -301,9 +302,12 @@ mod test {
         }
 
         assert_eq!(v.x, 0, "Vga::x should wrap around when reaching 64");
+
+        v.clear_screen();
     }
 
     #[test]
+    #[serial]
     fn test_backspace_line_start_empty_previous_line() {
         let mut v = Vga::new();
 
@@ -312,9 +316,12 @@ mod test {
 
         assert_eq!(v.y, 0, "Vga::y should decrease by 1 when deleting a character at the beginning of a line");
         assert_eq!(v.x, 0, "Vga::x should return to the beginning of the previous line when it is empty");
+
+        v.clear_screen();
     }
 
     #[test]
+    #[serial]
     fn test_backspace_line_start_previous_line_with_content() {
         let mut v = Vga::new();
 
@@ -327,9 +334,12 @@ mod test {
             v.x, 12,
             "Vga::x should return to the last written non-null character of the previous line when deleting a line"
         );
+
+        v.clear_screen();
     }
 
     #[test]
+    #[serial]
     fn test_hello_world() {
         let mut v = Vga::new();
 
@@ -345,5 +355,7 @@ mod test {
 
             assert_eq!(&written_content, b"Hello, World", "Content has not been written to VGA_BUFFER_ADDR");
         }
+
+        v.clear_screen();
     }
 }
