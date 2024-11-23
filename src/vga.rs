@@ -155,6 +155,10 @@ impl Buffer {
 
         result
     }
+
+    pub fn at(&self, pos: u16) -> Option<&u16> {
+        self.buf.get(pos as usize)
+    }
 }
 
 #[allow(unused)]
@@ -237,7 +241,7 @@ impl Vga {
         self.x = 0;
 
         if self.y >= VGA_HEIGHT {
-            self.scroll();
+            self.scroll_down();
         }
 
         #[cfg(not(test))]
@@ -306,7 +310,13 @@ impl Vga {
         let on_first_row = self.y == 0;
 
         if on_first_col && on_first_row {
-            return;
+            if self.y > 0 {
+                self.y -= 1;
+            }
+            if self.line_offset > 0 {
+                self.line_offset -= 1;
+            }
+            self.x = self.get_x_for_y(self.y as usize) as u8;
         } else if on_first_col {
             self.y = cmp::max(self.y - 1, 0);
             self.x = self.get_x_for_y(self.y as usize) as u8;
@@ -330,7 +340,7 @@ impl Vga {
         }
 
         if self.y >= VGA_HEIGHT {
-            self.scroll();
+            self.scroll_down();
         }
 
         #[cfg(not(test))]
@@ -339,17 +349,13 @@ impl Vga {
         }
     }
 
-    fn scroll(&mut self) {
-        self.line_offset = (self.line_offset + 1) % MAX_BUFFERED_LINES;
+    fn scroll_down(&mut self) {
+        self.line_offset = cmp::min(self.line_offset + 1, MAX_BUFFERED_LINES - VGA_HEIGHT);
         self.y = VGA_HEIGHT - 1;
         self.x = 0;
 
         for x in 0..VGA_WIDTH {
-            self.buffer.write(
-                (self.line_offset + VGA_HEIGHT - 1) % MAX_BUFFERED_LINES,
-                x as u16,
-                (self.color as u16) << 8, // Write a space with the current color
-            );
+            self.buffer.write(self.line_offset + VGA_HEIGHT - 1, x as u16, (self.color as u16) << 8);
         }
 
         self.flush();
@@ -362,19 +368,14 @@ impl Vga {
             return 0;
         }
 
-        let mut pos: isize = y as isize * VGA_WIDTH as isize + (VGA_WIDTH as isize - 1);
+        let mut pos: u16 = ((y as u16 + self.line_offset as u16) * VGA_WIDTH as u16 + (VGA_WIDTH as u16 - 1));
 
-        // Safety:
-        // The above check ensures we stay within the bounds of the VGA buffer row-wise. Then,
-        // the loop condition ensures we never read outside the bounds of the current row.
-        unsafe {
-            while pos > y as isize * VGA_WIDTH as isize {
-                if (*self.get_buffer_addr().offset(pos) & 0xFF) != 0 {
-                    return pos as usize % VGA_WIDTH as usize + 1;
-                }
-
-                pos -= 1;
+        while pos > (y as u16 + self.line_offset as u16) * VGA_WIDTH as u16 {
+            if (self.buffer.at(pos).unwrap() & 0xFF) != 0 {
+                return pos as usize % VGA_WIDTH as usize + 1;
             }
+
+            pos -= 1;
         }
 
         0
