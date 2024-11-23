@@ -1,7 +1,10 @@
-use core::{alloc, arch::asm, cmp, error::Error, ptr::write_volatile};
+use core::{arch::asm, cmp, ptr::write_volatile};
+
+#[cfg(test)]
 use spin::Mutex;
 
 #[repr(u8)]
+#[allow(unused)]
 #[derive(Debug, Clone, Copy)]
 pub enum Color {
     Black = 0,
@@ -48,43 +51,75 @@ fn get_vga_buffer_ptr() -> *mut u16 {
 
 pub struct OutOfBoundsError;
 
-/// Abstraction for the ugliness behind updating the cursor.
-///
-/// https://wiki.osdev.org/Text_Mode_Cursor
+/// Abstraction for managing the [Text-mode cursor](https://wiki.osdev.org/Text_Mode_Cursor).
 #[derive(Clone, Copy)]
 pub struct Cursor {}
 
 impl Cursor {
-    /// Updates the text-mode cursor to position `x, y` in the VGA buffer.
+    const LOCATION_REG_LOW: u8 = 0x0F;
+    const LOCATION_REG_HIGH: u8 = 0x0E;
+    const REG_START: u8 = 0x0A;
+    const REG_END: u8 = 0x0B;
+
+    /// Updates the text-mode cursor position in the VGA buffer by setting the CRTC's
+    /// [location registers](http://www.osdever.net/FreeVGA/vga/crtcreg.htm#0F) (`0x0F` and `0x0D`)
+    /// to `x, y`.
+    ///
     /// ## SAFETY
-    /// This writes to kernel-managed memory, running this in a non-bare-metal environment
-    /// will result in invalid memory access.
-    pub unsafe fn update(&self, x: usize, y: usize) {
+    /// 1.  This function uses `Cursor::update`, which writes directly to the VGA buffer. In user-mode, this **will** result
+    ///     in invalid memory access.
+    ///
+    /// 2.  `update_pos` may cause undefined behavior if called with `x` or `y` values outside of the range `0x00..=0x0F`.
+    pub unsafe fn update_pos(&self, x: u16, y: u16) {
         let out_of_bounds: bool = !(0..VGA_HEIGHT).contains(&(y as u8)) || !(0..VGA_WIDTH).contains(&(x as u8));
         if out_of_bounds {
             return;
         }
 
-        let pos = y * VGA_WIDTH as usize + x;
+        let pos = y * VGA_WIDTH as u16 + x;
 
+        self.update(Cursor::LOCATION_REG_LOW, (pos & 0xFF) as u8);
+        self.update(Cursor::LOCATION_REG_HIGH, ((pos >> 8) & 0xFF) as u8);
+    }
+
+    /// Resizes the cursor by updating the [cursor end & start register](http://www.osdever.net/FreeVGA/vga/crtcreg.htm#0A)
+    /// (`0x0A` and `0x0B`) to `start, end`. The values of `start` and `end` are expected to be in the range `0x00..=0x0F`.
+    ///
+    /// ## SAFETY
+    /// 1.  This function uses `Cursor::update`, which writes directly to the VGA buffer. In user-mode, this **will** result
+    ///     in invalid memory access.
+    ///
+    /// 2.  `resize` may cause undefined behavior if called with `start` or `end` values outside of the range `0x00..=0x0F`.
+    pub unsafe fn resize(&self, start: u8, end: u8) {
+        self.update(Cursor::REG_START, start);
+        self.update(Cursor::REG_END, end);
+    }
+
+    /// Abstraction for the ugliness behind updating the cursor.
+    ///
+    /// `0x3D4` is the I/O port address for the VGA's CRTC ([Cathode-ray tube](https://en.wikipedia.org/wiki/Cathode-ray_tube))'s
+    /// index register. The value being loaded into it defines which CRTC functionality we want to access.
+    /// The different indices that can be loaded into it are documented [here](http://www.osdever.net/FreeVGA/vga/).
+    ///
+    /// After the index has been loaded into the `0x3D4`, `dx`, (where the index register is stored) can be incremented by
+    /// one. This will move it to `0x3D5`, the CRTC's data register, signifying the CRTC's readiness to receive the input values.
+    ///
+    /// ## SAFETY:
+    /// This writes to the VGA buffer directly, running this in a non-bare-metal environment
+    /// will result in invalid memory access.
+    unsafe fn update(&self, index: u8, value: u8) {
         asm!(
             "mov dx, 0x3D4",
-            "mov al, 0x0F",
+            "mov al, {index}",
             "out dx, al",
             "inc dx",
-            "mov al, {low}",
+            "mov al, {value}",
             "out dx, al",
-            "mov dx, 0x3D4",
-            "mov al, 0x0E",
-            "out dx, al",
-            "inc dx",
-            "mov al, {high}",
-            "out dx, al",
-            low = in(reg_byte) (pos & 0xFF) as u8,
-            high = in(reg_byte) ((pos >> 8) & 0xFF) as u8,
+            index = in(reg_byte) (index),
+            value = in(reg_byte) (value),
             out("dx") _,
             out("al") _,
-        );
+        )
     }
 }
 
@@ -117,7 +152,8 @@ impl Vga {
 
         #[cfg(not(test))]
         unsafe {
-            t.cursor.update(0, 0);
+            t.cursor.update_pos(0, 0);
+            t.cursor.resize(0x0D, 0x0F);
         }
 
         t
@@ -133,9 +169,10 @@ impl Vga {
     pub fn delete_char(&mut self) {
         self.dec_cursor();
 
-        self.write_char_at(self.y, self.x, 0);
+        let _ = self.write_char_at(self.y, self.x, 0);
     }
 
+    #[allow(unused)]
     /// Writes `s` to the VGA buffer starting at `self.x, self.y` and increments the cursor by `s.len()`.
     pub fn write_u8_arr(&mut self, s: &[u8]) {
         for c in s.iter() {
@@ -150,7 +187,7 @@ impl Vga {
     pub fn clear_screen(&mut self) {
         for row in 0..VGA_HEIGHT {
             for col in 0..VGA_WIDTH {
-                self.write_char_at(row, col, 0);
+                let _ = self.write_char_at(row, col, 0);
             }
         }
     }
@@ -164,7 +201,7 @@ impl Vga {
 
         #[cfg(not(test))]
         unsafe {
-            self.cursor.update(self.x as usize, self.y as usize);
+            self.cursor.update_pos(self.x as u16, self.y as u16);
         }
     }
 
@@ -228,7 +265,7 @@ impl Vga {
 
         #[cfg(not(test))]
         unsafe {
-            self.cursor.update(self.x as usize, self.y as usize);
+            self.cursor.update_pos(self.x as u16, self.y as u16);
         }
     }
 
@@ -245,7 +282,7 @@ impl Vga {
 
         #[cfg(not(test))]
         unsafe {
-            self.cursor.update(self.x as usize, self.y as usize);
+            self.cursor.update_pos(self.x as u16, self.y as u16);
         }
     }
 

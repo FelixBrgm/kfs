@@ -1,3 +1,4 @@
+#[allow(unused)]
 pub fn u64_to_base(mut addr: u64, base: u8) -> Result<(usize, [u8; 65]), ()> {
     if !(2..=16).contains(&base) {
         return Err(());
