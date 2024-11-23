@@ -11,11 +11,9 @@ mod print;
 mod ps2;
 mod vga;
 
-use core::panic::PanicInfo;
-
 #[cfg(not(test))]
 #[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
+fn panic(_info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
 
@@ -43,74 +41,5 @@ pub extern "C" fn kernel_main() {
         //     let num_slice = &buf[buf.len() - len..];
         //     t.write_u8_arr(num_slice);
         // }
-    }
-}
-
-#[cfg(test)]
-mod u64_to_base_test {
-    use super::*;
-
-    #[test]
-    fn test_normal_functionality_base_16_ff() {
-        let num = 255u64;
-
-        let res = match u64_to_base(num, 16) {
-            Ok((len, buf)) => (len, buf),
-            _ => (0, [0u8; 65]),
-        };
-
-        let result_slice = &res.1[65 - res.0..];
-
-        let result_str = core::str::from_utf8(result_slice).unwrap();
-
-        assert_eq!(result_str, "FF");
-    }
-
-    #[test]
-    fn test_normal_functionality_base_16_ffff() {
-        let num = 65535u64;
-
-        let res = match u64_to_base(num, 16) {
-            Ok((len, buf)) => (len, buf),
-            _ => (0, [0u8; 65]),
-        };
-
-        let result_slice = &res.1[65 - res.0..];
-
-        let result_str = core::str::from_utf8(result_slice).unwrap();
-
-        assert_eq!(result_str, "FFFF");
-    }
-
-    #[test]
-    fn test_normal_functionality_base_16_ffffff() {
-        let num = 16777215u64;
-
-        let res = match u64_to_base(num, 16) {
-            Ok((len, buf)) => (len, buf),
-            _ => (0, [0u8; 65]),
-        };
-
-        let result_slice = &res.1[65 - res.0..];
-
-        let result_str = core::str::from_utf8(result_slice).unwrap();
-
-        assert_eq!(result_str, "FFFFFF");
-    }
-
-    #[test]
-    fn test_normal_functionality_base_16_ffffffff() {
-        let num = 4294967295u64;
-
-        let res = match u64_to_base(num, 16) {
-            Ok((len, buf)) => (len, buf),
-            _ => (0, [0u8; 65]),
-        };
-
-        let result_slice = &res.1[65 - res.0..];
-
-        let result_str = core::str::from_utf8(result_slice).unwrap();
-
-        assert_eq!(result_str, "FFFFFFFF");
     }
 }

@@ -45,6 +45,7 @@ static mut VGA_BUFFER_ADDR: [u16; VGA_WIDTH as usize * VGA_HEIGHT as usize] = [0
 const VGA_BUFFER_ADDR: *mut u16 = 0xB8000 as *mut u16;
 
 #[cfg(test)]
+#[allow(static_mut_refs)]
 fn get_vga_buffer_ptr() -> *mut u16 {
     unsafe { VGA_BUFFER_ADDR.as_mut_ptr() }
 }
@@ -55,6 +56,7 @@ pub struct OutOfBoundsError;
 #[derive(Clone, Copy)]
 pub struct Cursor {}
 
+#[allow(unused)]
 impl Cursor {
     const LOCATION_REG_LOW: u8 = 0x0F;
     const LOCATION_REG_HIGH: u8 = 0x0E;
@@ -123,6 +125,7 @@ impl Cursor {
     }
 }
 
+#[allow(unused)]
 #[derive(Clone, Copy)]
 /// Abstraction for VGA buffer interactions.
 pub struct Vga {
@@ -223,7 +226,7 @@ impl Vga {
     /// in test mode, where we do not have direct access to the VGA buffer.
     fn get_buffer_addr(&self) -> *mut u16 {
         #[cfg(test)]
-        unsafe {
+        {
             get_vga_buffer_ptr()
         }
 
@@ -337,7 +340,7 @@ mod test {
     fn test_line_wrap() {
         let mut v = Vga::new();
 
-        for col in 0..VGA_WIDTH {
+        for _ in 0..VGA_WIDTH {
             v.inc_cursor();
         }
 
