@@ -3,6 +3,7 @@
 .global _start
 .global stack_top
 .global GDT
+.global GDT_end
 
 
 .set MB_MAGIC, 0x1BADB002          
