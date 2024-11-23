@@ -47,14 +47,6 @@ fn get_vga_buffer_ptr() -> *mut u16 {
 
 pub struct OutOfBoundsError;
 
-#[derive(Clone, Copy)]
-pub struct Vga {
-    color: u8,
-    x: u8,
-    y: u8,
-    cursor: Cursor,
-}
-
 /// Abstraction for the ugliness behind updating the cursor.
 ///
 /// https://wiki.osdev.org/Text_Mode_Cursor
@@ -95,6 +87,15 @@ impl Cursor {
     }
 }
 
+#[derive(Clone, Copy)]
+/// Abstraction for VGA buffer interactions.
+pub struct Vga {
+    color: u8,
+    x: u8,
+    y: u8,
+    cursor: Cursor,
+}
+
 impl Default for Vga {
     fn default() -> Self {
         Self::new()
@@ -121,6 +122,67 @@ impl Vga {
         t
     }
 
+    /// Writes a character to the VGA buffer at `self.x, self.y` and increments its cursor.
+    pub fn write_char(&mut self, c: u8) {
+        let _ = self.write_char_at(self.y, self.x, c);
+        self.inc_cursor();
+    }
+
+    /// Deletes the character from the VGA buffer at `self.x, self.y` and decrements the cursor.
+    pub fn delete_char(&mut self) {
+        self.dec_cursor();
+
+        self.write_char_at(self.y, self.x, 0);
+    }
+
+    /// Writes `s` to the VGA buffer starting at `self.x, self.y` and increments the cursor by `s.len()`.
+    pub fn write_u8_arr(&mut self, s: &[u8]) {
+        for c in s.iter() {
+            if *c == 0 {
+                return;
+            }
+            self.write_char(*c);
+        }
+    }
+
+    /// Fills the whole VGA buffer with `0u16`, clearing the screen.
+    pub fn clear_screen(&mut self) {
+        for row in 0..VGA_HEIGHT {
+            for col in 0..VGA_WIDTH {
+                self.write_char_at(row, col, 0);
+            }
+        }
+    }
+
+    /// Moves `self.y` to `self.y + 1` and `self.x` to `0`, and updates the cursor.
+    pub fn new_line(&mut self) {
+        let current_row = self.y;
+        while current_row == self.y {
+            self.inc_cursor();
+        }
+
+        #[cfg(not(test))]
+        unsafe {
+            self.cursor.update(self.x as usize, self.y as usize);
+        }
+    }
+
+    /// Sets the 4 most significant bits of `self.color` to `foreground`, setting the
+    /// font color of the VGA buffer.
+    pub fn set_foreground_color(&mut self, foreground: Color) {
+        self.color &= 0xF0;
+        self.color |= foreground.to_foreground();
+    }
+
+    /// Sets the 4 least significant bits of `self.color` to `background`, setting the
+    /// background color of the VGA buffer.
+    pub fn set_background_color(&mut self, background: Color) {
+        self.color &= 0x0F;
+        self.color |= background.to_background();
+    }
+
+    /// Abstraction around the VGA buffer address to avoid invalid memory access when running
+    /// in test mode, where we do not have direct access to the VGA buffer.
     fn get_buffer_addr(&self) -> *mut u16 {
         #[cfg(test)]
         unsafe {
@@ -133,22 +195,13 @@ impl Vga {
         }
     }
 
-    pub fn write_char(&mut self, c: u8) {
-        let _ = self.write_char_at(self.y, self.x, c);
-        self.inc_cursor();
-    }
-
-    pub fn delete_char(&mut self) {
-        self.dec_cursor();
-        self.write_char_at(self.y, self.x, 0);
-    }
-
-    fn write_char_at(&self, row: u8, column: u8, character: u8) -> Result<(), OutOfBoundsError> {
-        if row >= VGA_HEIGHT || column >= VGA_WIDTH {
+    /// Writes `character` at `self.x == x` and `self.y == y` into the VGA buffer.
+    fn write_char_at(&self, y: u8, x: u8, character: u8) -> Result<(), OutOfBoundsError> {
+        if y >= VGA_HEIGHT || x >= VGA_WIDTH {
             return Err(OutOfBoundsError);
         }
         let entry: u16 = (character as u16) | (self.color as u16) << 8;
-        let index: isize = row as isize * VGA_WIDTH as isize + column as isize;
+        let index: isize = y as isize * VGA_WIDTH as isize + x as isize;
 
         // Safety:
         // The if statement above ensures that the index never goes out of the dedicated memory for the chars on screen.
@@ -158,23 +211,7 @@ impl Vga {
         Ok(())
     }
 
-    pub fn write_u8_arr(&mut self, s: &[u8]) {
-        for c in s.iter() {
-            if *c == 0 {
-                return;
-            }
-            self.write_char(*c);
-        }
-    }
-
-    pub fn clear_screen(&mut self) {
-        for row in 0..VGA_HEIGHT {
-            for col in 0..VGA_WIDTH {
-                self.write_char_at(row, col, 0);
-            }
-        }
-    }
-
+    /// Decrements the cursor, taking line wrapping into account.
     fn dec_cursor(&mut self) {
         let on_first_col = self.x == 0;
         let on_first_row = self.y == 0;
@@ -183,7 +220,7 @@ impl Vga {
             return;
         } else if on_first_col {
             self.y = cmp::max(self.y - 1, 0);
-            self.x = self.get_row_pos_for_col(self.y as usize) as u8;
+            self.x = self.get_x_for_y(self.y as usize) as u8;
         } else {
             self.x -= 1;
         }
@@ -194,6 +231,7 @@ impl Vga {
         }
     }
 
+    /// Increments the cursor, taking line wrapping into account.
     fn inc_cursor(&mut self) {
         self.x += 1;
         if self.x >= VGA_WIDTH {
@@ -212,20 +250,20 @@ impl Vga {
 
     /// Gets the position of the last written character for `row`, to ensure the cursor returns
     /// to the correct position when backspacing at `col == 0`.
-    fn get_row_pos_for_col(&self, row: usize) -> usize {
-        if !(0..VGA_HEIGHT).contains(&(row as u8)) {
+    fn get_x_for_y(&self, y: usize) -> usize {
+        if !(0..VGA_HEIGHT).contains(&(y as u8)) {
             return 0;
         }
 
-        let mut pos: isize = row as isize * VGA_WIDTH as isize + (VGA_WIDTH as isize - 1);
+        let mut pos: isize = y as isize * VGA_WIDTH as isize + (VGA_WIDTH as isize - 1);
 
         // Safety:
         // The above check ensures we stay within the bounds of the VGA buffer row-wise. Then,
         // the loop condition ensures we never read outside the bounds of the current row.
         unsafe {
-            while pos >= row as isize * VGA_WIDTH as isize {
+            while pos > y as isize * VGA_WIDTH as isize {
                 if (*self.get_buffer_addr().offset(pos) & 0xFF) != 0 {
-                    return pos as usize % VGA_WIDTH as usize;
+                    return pos as usize % VGA_WIDTH as usize + 1;
                 }
 
                 pos -= 1;
@@ -233,28 +271,6 @@ impl Vga {
         }
 
         0
-    }
-
-    pub fn new_line(&mut self) {
-        let current_row = self.y;
-        while current_row == self.y {
-            self.inc_cursor();
-        }
-
-        #[cfg(not(test))]
-        unsafe {
-            self.cursor.update(self.x as usize, self.y as usize);
-        }
-    }
-
-    pub fn set_foreground_color(&mut self, foreground: Color) {
-        self.color &= 0xF0;
-        self.color |= foreground.to_foreground();
-    }
-
-    pub fn set_background_color(&mut self, background: Color) {
-        self.color &= 0x0F;
-        self.color |= background.to_background();
     }
 }
 
@@ -288,7 +304,18 @@ mod test {
     }
 
     #[test]
-    fn test_backspace_line_start() {
+    fn test_backspace_line_start_empty_previous_line() {
+        let mut v = Vga::new();
+
+        v.new_line();
+        v.delete_char();
+
+        assert_eq!(v.y, 0, "Vga::y should decrease by 1 when deleting a character at the beginning of a line");
+        assert_eq!(v.x, 0, "Vga::x should return to the beginning of the previous line when it is empty");
+    }
+
+    #[test]
+    fn test_backspace_line_start_previous_line_with_content() {
         let mut v = Vga::new();
 
         v.write_u8_arr(b"Hello, World");
@@ -297,8 +324,26 @@ mod test {
 
         assert_eq!(v.y, 0, "Vga::y should decrease by 1 when deleting a character at the beginning of a line");
         assert_eq!(
-            v.x, 11,
+            v.x, 12,
             "Vga::x should return to the last written non-null character of the previous line when deleting a line"
         );
+    }
+
+    #[test]
+    fn test_hello_world() {
+        let mut v = Vga::new();
+
+        v.write_u8_arr(b"Hello, World");
+        unsafe {
+            let buf = &VGA_BUFFER_ADDR[0..12];
+
+            let mut written_content: [u8; 12] = [0u8; 12];
+
+            for (idx, &entry) in buf.iter().enumerate() {
+                written_content[idx] = (entry & 0x00FF) as u8;
+            }
+
+            assert_eq!(&written_content, b"Hello, World", "Content has not been written to VGA_BUFFER_ADDR");
+        }
     }
 }
