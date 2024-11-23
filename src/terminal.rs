@@ -267,6 +267,8 @@ mod test {
 
         assert!(v.x == 0);
         assert!(v.y == 0);
-        assert!(v.color == Color::Black.to_background());
+
+        let expected_color = Color::Black.to_background() | Color::White.to_foreground();
+        assert!(v.color == expected_color);
     }
 }
