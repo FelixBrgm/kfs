@@ -1,4 +1,4 @@
-use core::{arch::asm, cmp, error::Error};
+use core::{alloc, arch::asm, cmp, error::Error, ptr::write_volatile};
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy)]
@@ -33,7 +33,17 @@ impl Color {
 
 pub const VGA_WIDTH: u8 = 80;
 pub const VGA_HEIGHT: u8 = 25;
+
+#[cfg(test)]
+static mut VGA_BUFFER_ADDR: [u16; VGA_WIDTH as usize * VGA_HEIGHT as usize] = [0; VGA_WIDTH as usize * VGA_HEIGHT as usize];
+
+#[cfg(not(test))]
 const VGA_BUFFER_ADDR: *mut u16 = 0xB8000 as *mut u16;
+
+#[cfg(test)]
+fn get_vga_buffer_ptr() -> *mut u16 {
+    unsafe { VGA_BUFFER_ADDR.as_mut_ptr() }
+}
 
 pub struct OutOfBoundsError;
 
@@ -46,12 +56,17 @@ pub struct Vga {
 }
 
 /// Abstraction for the ugliness behind updating the cursor.
+///
 /// https://wiki.osdev.org/Text_Mode_Cursor
 #[derive(Clone, Copy)]
 pub struct Cursor {}
 
 impl Cursor {
-    pub fn update(&self, x: usize, y: usize) {
+    /// Updates the text-mode cursor to position `x, y` in the VGA buffer.
+    /// ## SAFETY
+    /// This writes to kernel-managed memory, running this in a non-bare-metal environment
+    /// will result in invalid memory access.
+    pub unsafe fn update(&self, x: usize, y: usize) {
         let out_of_bounds: bool = !(0..VGA_HEIGHT).contains(&(y as u8)) || !(0..VGA_WIDTH).contains(&(x as u8));
         if out_of_bounds {
             return;
@@ -59,29 +74,24 @@ impl Cursor {
 
         let pos = y * VGA_WIDTH as usize + x;
 
-        // Safety:
-        // Inline-assembly is unsafe by design, but the check above ensures
-        // we do not write outside of the VGA buffer cursor's bounds.
-        unsafe {
-            asm!(
-                "mov dx, 0x3D4",
-                "mov al, 0x0F",
-                "out dx, al",
-                "inc dx",
-                "mov al, {low}",
-                "out dx, al",
-                "mov dx, 0x3D4",
-                "mov al, 0x0E",
-                "out dx, al",
-                "inc dx",
-                "mov al, {high}",
-                "out dx, al",
-                low = in(reg_byte) (pos & 0xFF) as u8,
-                high = in(reg_byte) ((pos >> 8) & 0xFF) as u8,
-                out("dx") _,
-                out("al") _,
-            );
-        }
+        asm!(
+            "mov dx, 0x3D4",
+            "mov al, 0x0F",
+            "out dx, al",
+            "inc dx",
+            "mov al, {low}",
+            "out dx, al",
+            "mov dx, 0x3D4",
+            "mov al, 0x0E",
+            "out dx, al",
+            "inc dx",
+            "mov al, {high}",
+            "out dx, al",
+            low = in(reg_byte) (pos & 0xFF) as u8,
+            high = in(reg_byte) ((pos >> 8) & 0xFF) as u8,
+            out("dx") _,
+            out("al") _,
+        );
     }
 }
 
@@ -99,10 +109,28 @@ impl Vga {
             y: 0,
             cursor: Cursor {},
         };
+
         t.set_foreground_color(Color::White);
         t.set_background_color(Color::Black);
-        t.cursor.update(0, 0);
+
+        #[cfg(not(test))]
+        unsafe {
+            t.cursor.update(0, 0);
+        }
+
         t
+    }
+
+    fn get_buffer_addr(&self) -> *mut u16 {
+        #[cfg(test)]
+        unsafe {
+            get_vga_buffer_ptr()
+        }
+
+        #[cfg(not(test))]
+        {
+            VGA_BUFFER_ADDR
+        }
     }
 
     pub fn write_char(&mut self, c: u8) {
@@ -121,10 +149,11 @@ impl Vga {
         }
         let entry: u16 = (character as u16) | (self.color as u16) << 8;
         let index: isize = row as isize * VGA_WIDTH as isize + column as isize;
+
         // Safety:
-        // The if statement above ensures that the index never goes out of the dedicated memory for the chars on screen
+        // The if statement above ensures that the index never goes out of the dedicated memory for the chars on screen.
         unsafe {
-            *VGA_BUFFER_ADDR.offset(index) = entry;
+            write_volatile(self.get_buffer_addr().offset(index), entry);
         }
         Ok(())
     }
@@ -159,7 +188,10 @@ impl Vga {
             self.x -= 1;
         }
 
-        self.cursor.update(self.x as usize, self.y as usize);
+        #[cfg(not(test))]
+        unsafe {
+            self.cursor.update(self.x as usize, self.y as usize);
+        }
     }
 
     fn inc_cursor(&mut self) {
@@ -172,7 +204,10 @@ impl Vga {
             self.y = 0;
         }
 
-        self.cursor.update(self.x as usize, self.y as usize);
+        #[cfg(not(test))]
+        unsafe {
+            self.cursor.update(self.x as usize, self.y as usize);
+        }
     }
 
     /// Gets the position of the last written character for `row`, to ensure the cursor returns
@@ -189,7 +224,7 @@ impl Vga {
         // the loop condition ensures we never read outside the bounds of the current row.
         unsafe {
             while pos >= row as isize * VGA_WIDTH as isize {
-                if (*VGA_BUFFER_ADDR.offset(pos) & 0xFF) != 0 {
+                if (*self.get_buffer_addr().offset(pos) & 0xFF) != 0 {
                     return pos as usize % VGA_WIDTH as usize;
                 }
                 pos -= 1;
@@ -204,7 +239,11 @@ impl Vga {
         while current_row == self.y {
             self.inc_cursor();
         }
-        self.cursor.update(self.x as usize, self.y as usize);
+
+        #[cfg(not(test))]
+        unsafe {
+            self.cursor.update(self.x as usize, self.y as usize);
+        }
     }
 
     pub fn set_foreground_color(&mut self, foreground: Color) {
@@ -228,6 +267,6 @@ mod test {
 
         assert!(v.x == 0);
         assert!(v.y == 0);
-        assert
+        assert!(v.color == Color::Black.to_background());
     }
 }
