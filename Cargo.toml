@@ -12,3 +12,5 @@ panic = "abort"
 [profile.release]
 panic = "abort"
 
+[dependencies]
+spin = "0.9.8"

@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 // Do not move these, around, the order matters :)
 // https://wiki.osdev.org/Interrupt_Descriptor_Table
 #[repr(C, packed)]

@@ -34,7 +34,7 @@ iso: all
 	grub-mkrescue -v -o $(BUILD_DIR)/$(NAME).iso $(BUILD_DIR)/iso --compress=xz
 
 run: iso
-	qemu-system-i386 -cdrom $(BUILD_DIR)/$(NAME).iso -boot d -curses
+	qemu-system-i386 -cdrom $(BUILD_DIR)/$(NAME).iso -boot d
 
 debug-iso: all
 	mkdir -p $(BUILD_DIR)/iso/boot/grub
