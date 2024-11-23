@@ -52,6 +52,15 @@ fn get_vga_buffer_ptr() -> *mut u16 {
     unsafe { VGA_BUFFER_ADDR.as_mut_ptr() }
 }
 
+#[allow(dead_code)]
+#[derive(PartialEq, Eq)]
+pub enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
 pub struct OutOfBoundsError;
 
 /// Abstraction for managing the [Text-mode cursor](https://wiki.osdev.org/Text_Mode_Cursor).
@@ -200,6 +209,22 @@ impl Vga {
         }
 
         t
+    }
+
+    pub fn move_cursor(&mut self, dir: Direction) {
+        if dir == Direction::Up {
+            self.y = cmp::max(self.y - 1, 0);
+        } else if dir == Direction::Down {
+            self.y = cmp::min(self.y + 1, MAX_BUFFERED_LINES);
+        } else if dir == Direction::Left {
+            self.x = cmp::max(self.x - 1, 0);
+        } else {
+            self.x = cmp::min(self.x + 1, VGA_WIDTH - 1);
+        }
+
+        unsafe {
+            self.cursor.update_pos(self.x as u16, self.y as u16);
+        }
     }
 
     /// Writes a character to the VGA buffer at `self.x, self.y` and increments its cursor.
@@ -352,11 +377,6 @@ impl Vga {
     fn scroll_down(&mut self) {
         self.line_offset = cmp::min(self.line_offset + 1, MAX_BUFFERED_LINES - VGA_HEIGHT);
         self.y = VGA_HEIGHT - 1;
-        self.x = 0;
-
-        for x in 0..VGA_WIDTH {
-            self.buffer.write(self.line_offset + VGA_HEIGHT - 1, x as u16, (self.color as u16) << 8);
-        }
 
         self.flush();
     }
@@ -368,7 +388,7 @@ impl Vga {
             return 0;
         }
 
-        let mut pos: u16 = ((y as u16 + self.line_offset as u16) * VGA_WIDTH as u16 + (VGA_WIDTH as u16 - 1));
+        let mut pos: u16 = (y as u16 + self.line_offset as u16) * VGA_WIDTH as u16 + (VGA_WIDTH as u16 - 1);
 
         while pos > (y as u16 + self.line_offset as u16) * VGA_WIDTH as u16 {
             if (self.buffer.at(pos).unwrap() & 0xFF) != 0 {
