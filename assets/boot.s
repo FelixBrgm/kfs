@@ -2,7 +2,7 @@
 
 .global _start
 .global stack_top
-.global GDT
+.global GDT_end
 .global GDT_end
 
 
@@ -23,22 +23,10 @@
 		.skip 4096
 	stack_top:
 
-.section .data
-	gdtr:	.word 0x0
-			.long 0x0
-
+ 
 .section .text
 	_start:
 		mov $stack_top, %esp
-	
-	_gdt:
-		xor   %eax, %eax
-		lea	  GDT, %eax 
-		mov   %eax, (gdtr + 2)
-		mov 3, %eax
-		mov   %eax, (gdtr)
-		LGDT  gdtr
-
 
         push %eax
         push %ebx
