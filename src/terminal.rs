@@ -1,5 +1,5 @@
 use core::{alloc, arch::asm, cmp, error::Error, ptr::write_volatile};
-use serial_test::serial;
+use spin::Mutex;
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy)]
@@ -276,6 +276,9 @@ impl Vga {
 }
 
 #[cfg(test)]
+static VGA_BUFFER_LOCK: Mutex<()> = Mutex::new(());
+
+#[cfg(test)]
 mod test {
     use super::*;
 
@@ -307,8 +310,9 @@ mod test {
     }
 
     #[test]
-    #[serial]
     fn test_backspace_line_start_empty_previous_line() {
+        let _guard = VGA_BUFFER_LOCK.lock();
+
         let mut v = Vga::new();
 
         v.new_line();
@@ -321,8 +325,9 @@ mod test {
     }
 
     #[test]
-    #[serial]
     fn test_backspace_line_start_previous_line_with_content() {
+        let _guard = VGA_BUFFER_LOCK.lock();
+
         let mut v = Vga::new();
 
         v.write_u8_arr(b"Hello, World");
@@ -339,8 +344,9 @@ mod test {
     }
 
     #[test]
-    #[serial]
     fn test_hello_world() {
+        let _guard = VGA_BUFFER_LOCK.lock();
+
         let mut v = Vga::new();
 
         v.write_u8_arr(b"Hello, World");
