@@ -1,4 +1,4 @@
-use core::{arch::asm, cmp, ptr::write_volatile};
+use core::{arch::asm, ptr::write_volatile};
 
 #[cfg(test)]
 use spin::Mutex;
@@ -136,6 +136,11 @@ impl Cursor {
 }
 
 #[derive(Clone, Copy)]
+/// Buffer implementation for storing content beyond the VGA buffer size of 4000 bytes (80 x 25
+/// u16 entries).
+///
+/// Intended to be used in the `Vga` implementation. Can be written to, and flushed into the VGA buffer
+/// using `Vga::flush`.
 pub struct Buffer {
     buf: [u16; (VGA_WIDTH as usize) * (MAX_BUFFERED_LINES as usize)],
 }
@@ -143,33 +148,40 @@ pub struct Buffer {
 impl Buffer {
     const NEWLINE: u8 = 0xFF;
 
+    /// Returns a new `Buffer` object with a buffer size of `VGA_WIDTH * MAX_BUFFERED_LINES`. `VGA_WIDTH`
+    /// is fixed to 80 (hardware limitation), and `MAX_BUFFERED_LINES` can be increased freely as long as enough memory
+    /// is available.
     pub fn new() -> Self {
         Self {
             buf: [0u16; (VGA_WIDTH as usize) * (MAX_BUFFERED_LINES as usize)],
         }
     }
 
+    /// Writes `entry` to `self.buf[line_offset * VGA_WIDTH + rel_index]`.
+    /// ### Note
+    /// This does **not** write to the VGA buffer, only to the internal one. Writes to the VGA buffer are to be handled
+    /// by `Vga::flush`.
     pub fn write(&mut self, line_offset: u8, rel_index: u16, entry: u16) {
         let abs_index: usize = ((line_offset as usize * VGA_WIDTH as usize) + rel_index as usize) % self.buf.len();
 
         self.buf[abs_index] = entry;
     }
 
-    pub fn slice(&self, line_offset: u8) -> [u16; VGA_BUFFER_SIZE as usize] {
+    /// Returns a `self.buf` slice of `VGA_BUFFER_SIZE` starting at `line_offset`.
+    pub fn slice(&self, line_offset: u8) -> &[u16] {
         let start = (line_offset as usize) * (VGA_WIDTH as usize);
         let end = start + VGA_BUFFER_SIZE as usize;
 
-        let mut result = [0u16; VGA_BUFFER_SIZE as usize];
-
-        result.copy_from_slice(&self.buf[start..end]);
-
-        result
+        &self.buf[start..end]
     }
 
     pub fn at(&self, pos: u16) -> Option<&u16> {
         self.buf.get(pos as usize)
     }
 
+    /// Returns the length of the written content starting from `from_x, from_y`, until either
+    /// the next newline, or if no newline is found, until the next null VGA entry, i.e the next
+    /// entry for which `(x & 0xFF) == 0` is true.
     pub fn block_length(&self, from_x: u8, from_y: u8) -> u16 {
         let slice = &self.buf[from_y as usize * VGA_WIDTH as usize + from_x as usize..];
         if let Some(ind) = slice.iter().position(|x| *x == Buffer::NEWLINE as u16) {
@@ -221,10 +233,10 @@ impl Vga {
 
     pub fn move_cursor(&mut self, dir: Direction) {
         match dir {
-            Direction::Up => self.y = cmp::max(self.y - 1, 0),
-            Direction::Down => self.y = cmp::min(self.y + 1, MAX_BUFFERED_LINES),
-            Direction::Left => self.x = cmp::max(self.x - 1, 0),
-            Direction::Right => self.x = cmp::min(self.x + 1, VGA_WIDTH - 1),
+            Direction::Up => self.y = (self.y - 1).max(0),
+            Direction::Down => self.y = (self.y + 1).min(MAX_BUFFERED_LINES),
+            Direction::Left => self.x = (self.x - 1).max(0),
+            Direction::Right => self.x = (self.x + 1).min(VGA_WIDTH - 1),
         }
 
         unsafe {
@@ -333,7 +345,7 @@ impl Vga {
     }
 
     fn flush(&self) {
-        let current_displayed_content: [u16; VGA_BUFFER_SIZE as usize] = self.buffer.slice(self.line_offset);
+        let current_displayed_content = self.buffer.slice(self.line_offset);
 
         for (idx, &entry) in current_displayed_content.iter().enumerate() {
             unsafe {
@@ -361,15 +373,10 @@ impl Vga {
         let on_first_row = self.y == 0;
 
         if on_first_col && on_first_row {
-            if self.y > 0 {
-                self.y -= 1;
-            }
-            if self.line_offset > 0 {
-                self.line_offset -= 1;
-            }
+            self.line_offset = (self.line_offset - 1).max(0);
             self.x = self.get_x_for_y(self.y as usize) as u8;
         } else if on_first_col {
-            self.y = cmp::max(self.y - 1, 0);
+            self.y = (self.y - 1).max(0);
             self.x = self.get_x_for_y(self.y as usize) as u8;
         } else {
             self.x -= 1;
@@ -401,30 +408,16 @@ impl Vga {
     }
 
     fn scroll_down(&mut self) {
-        self.line_offset = cmp::min(self.line_offset + 1, MAX_BUFFERED_LINES - VGA_HEIGHT);
+        self.line_offset = (self.line_offset + 1).min(MAX_BUFFERED_LINES - VGA_HEIGHT);
         self.y = VGA_HEIGHT - 1;
 
         self.flush();
     }
 
-    /// Gets the position of the last written character for `row`, to ensure the cursor returns
-    /// to the correct position when backspacing at `col == 0`.
+    /// Gets the position of the last written character for `y`, to ensure the cursor returns
+    /// to the correct position when backspacing at `x == 0`.
     fn get_x_for_y(&self, y: usize) -> usize {
-        if !(0..VGA_HEIGHT).contains(&(y as u8)) {
-            return 0;
-        }
-
-        let mut pos: u16 = (y as u16 + self.line_offset as u16) * VGA_WIDTH as u16 + (VGA_WIDTH as u16 - 1);
-
-        while pos > (y as u16 + self.line_offset as u16) * VGA_WIDTH as u16 {
-            if (self.buffer.at(pos).unwrap() & 0xFF) != 0 && (self.buffer.at(pos).unwrap() & 0xFF) != Buffer::NEWLINE as u16 {
-                return pos as usize % VGA_WIDTH as usize + 1;
-            }
-
-            pos -= 1;
-        }
-
-        0
+        (self.buffer.block_length(0, y as u8) - 1) as usize
     }
 }
 
