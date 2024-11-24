@@ -67,7 +67,7 @@ impl Buffer {
     /// the next newline, or if no newline is found, until the next null VGA entry, i.e the next
     /// entry for which `(x & 0xFF) == 0` is true.
     pub fn block_length(&self, from_x: u8, from_y: u8) -> u16 {
-        let slice = &self.buf[from_y as usize * VGA_WIDTH as usize + from_x as usize..];
+        let slice = &self.buf[(from_y as usize + self.line_offset as usize) * VGA_WIDTH as usize + from_x as usize..];
         if let Some(ind) = slice.iter().position(|x| *x == Buffer::NEWLINE as u16) {
             return ind as u16;
         }

@@ -109,7 +109,7 @@ impl Vga {
             Direction::Down => self.y = (self.y + 1).min(MAX_BUFFERED_LINES - 1),
             Direction::Left => self.x = self.x.saturating_sub(1),
             Direction::Right => {
-                let current_line_length = self.buffer.block_length(0, self.y + self.buffer.offset()) as u8;
+                let current_line_length = self.buffer.block_length(0, self.y) as u8;
                 self.x = (self.x + 1).min(current_line_length);
             } // self.x = (self.x + 1).min(self.buffer.block_length(self.x, self.y + self.buffer.offset()) as u8),
         }
@@ -207,7 +207,7 @@ impl Vga {
             return;
         }
 
-        let block_length = self.buffer.block_length(0, self.y + self.buffer.offset());
+        let block_length = self.buffer.block_length(0, self.y);
         let x = block_length % VGA_WIDTH as u16;
         let y = self.y as u16 + self.buffer.offset() as u16;
         let _ = self.write_char_at(x as u8, y as u8, Buffer::NEWLINE);
@@ -258,7 +258,7 @@ impl Vga {
     ///
     /// Needs to be called at every write.
     fn shift_text_right(&mut self, from_x: u8, by: u8) {
-        let block_length = self.buffer.block_length(from_x, self.y + self.buffer.offset());
+        let block_length = self.buffer.block_length(from_x, self.y);
 
         for x in (from_x..(from_x + block_length as u8)).rev() {
             let x_shifted = (x + by) % VGA_WIDTH;
@@ -374,7 +374,7 @@ impl Vga {
     /// Gets the position of the last written character for `y`, to ensure the cursor returns
     /// to the correct position when backspacing at `x == 0`.
     fn get_x_for_y(&self, y: usize) -> usize {
-        self.buffer.block_length(0, (y + self.buffer.offset() as usize) as u8).saturating_sub(1) as usize
+        self.buffer.block_length(0, (y as usize) as u8).saturating_sub(1) as usize
     }
 }
 
@@ -515,7 +515,7 @@ mod test {
         v.write_u8_arr(b"Hello, World");
 
         assert_eq!(
-            v.buffer.block_length(0, v.y + v.buffer.offset()),
+            v.buffer.block_length(0, v.y),
             12,
             "First character of the previous line should not be deleted when pressing enter"
         );
@@ -533,9 +533,9 @@ mod test {
 
         v.new_line();
 
-        let block_length = v.buffer.block_length(0, v.y + v.buffer.offset());
+        let block_length = v.buffer.block_length(0, v.y);
         let x = block_length % VGA_WIDTH as u16;
-        let y = v.y as u16 + v.buffer.offset() as u16;
+        let y = v.y as u16;
 
         assert_eq!(x, 0, "Vga::x should equal to zero here");
         assert_eq!(y, 1, "Vga::x should equal to one here");
