@@ -24,22 +24,19 @@ pub extern "C" fn kernel_main() {
     t.clear_screen();
 
     loop {
-        if let Some(char) = ps2::read_if_ready() {
+        if let Some(char) = ps2::read_if_ready(None) {
             if char == ps2::BACKSPACE {
                 t.delete_char();
             } else if char == ps2::ENTER {
                 t.new_line();
+            } else if char == ps2::ARROW_LEFT {
+                t.move_cursor(vga::Direction::Left);
+            } else if char == ps2::ARROW_RIGHT {
+                t.move_cursor(vga::Direction::Right);
+            } else if char == ps2::ARROW_UP || char == ps2::ARROW_DOWN {
             } else {
                 t.write_char(char as u8);
             }
         }
-        // Use this block of code to see the scancode for each keypress
-        // else {
-        //     let conv = u64_to_base(code as u64, 10).unwrap();
-        //     let buf = conv.1;
-        //     let len = conv.0;
-        //     let num_slice = &buf[buf.len() - len..];
-        //     t.write_u8_arr(num_slice);
-        // }
     }
 }

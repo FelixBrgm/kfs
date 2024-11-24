@@ -1,5 +1,7 @@
 use core::arch::asm;
 
+use crate::{print, vga::Vga};
+
 pub const PS2_DATA_PORT: u16 = 0x60;
 pub const PS2_STATUS_PORT: u16 = 0x64;
 pub const PS2_OUTPUT_BUFFER_STATUS_BIT: u8 = 1;
@@ -23,12 +25,31 @@ fn buffer_full() -> bool {
 
 /// Reads from the PS2 data port if the PS2 status port is ready. Returns `Some(char)`
 /// if the converted scancode is a supported character.
-pub fn read_if_ready() -> Option<char> {
+///
+/// If `terminal` is not `None`, uses it to display the scancodes on keyboard inputs.
+/// /// ### Example Usage:
+/// ```
+/// let mut v = Vga::new();
+///
+/// if let Some(c) = read_if_ready(None) == 'a' as u8 {
+///     v.write_char(b'a');
+/// }
+pub fn read_if_ready(terminal: Option<&mut Vga>) -> Option<char> {
     if !buffer_full() {
         return None;
     }
 
     let code = unsafe { read(PS2_DATA_PORT) };
+
+    if let Some(term) = terminal {
+        let conv = print::u64_to_base(code as u64, 10).unwrap();
+        let buf = conv.1;
+        let len = conv.0;
+        let num_slice = &buf[buf.len() - len..];
+        term.write_char(b'|');
+        term.write_u8_arr(num_slice);
+        term.write_char(b'|');
+    }
 
     if let Some(char) = SCANCODE_TO_ASCII.get(code as usize).and_then(|&opt| opt) {
         return Some(char);
@@ -40,8 +61,11 @@ pub fn read_if_ready() -> Option<char> {
 /// Reads from `port` and returns the extracted value.
 /// ## SAFETY:
 /// `port` is assumed to be one of `PS2_STATUS_PORT` or `PS2_DATA_PORT`. Passing another value
-/// to this function will result in undefines behavior.
+/// to this function will result in a panic.
+///
 unsafe fn read(port: u16) -> u8 {
+    assert!(port == PS2_DATA_PORT || port == PS2_STATUS_PORT);
+
     let res: u8;
 
     asm!(
@@ -55,9 +79,13 @@ unsafe fn read(port: u16) -> u8 {
 
 pub const BACKSPACE: char = 14 as char;
 pub const ENTER: char = 28 as char;
+pub const ARROW_LEFT: char = 75 as char;
+pub const ARROW_UP: char = 72 as char;
+pub const ARROW_RIGHT: char = 77 as char;
+pub const ARROW_DOWN: char = 80 as char;
 
 /// Conversion table for all characters currently supported by our kernel for PS2 input.
-const SCANCODE_TO_ASCII: [Option<char>; 58] = [
+const SCANCODE_TO_ASCII: [Option<char>; 256] = [
     None,
     None,
     Some('1'),
@@ -116,4 +144,215 @@ const SCANCODE_TO_ASCII: [Option<char>; 58] = [
     Some('*'),
     None,
     Some(' '),
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    Some(ARROW_UP),
+    None,
+    None,
+    Some(ARROW_LEFT),
+    None,
+    Some(ARROW_RIGHT),
+    None,
+    None,
+    Some(ARROW_DOWN),
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
 ];
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn read_from_random_port() {
+        unsafe {
+            read(0x66);
+        }
+    }
+}
