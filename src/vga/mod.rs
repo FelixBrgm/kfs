@@ -59,7 +59,6 @@ pub struct Vga {
     y: u8,
     cursor: Cursor,
     buffer: Buffer,
-    line_offset: u8,
 }
 
 impl Default for Vga {
@@ -76,7 +75,6 @@ impl Vga {
             y: 0,
             cursor: Cursor {},
             buffer: Buffer::new(),
-            line_offset: 0,
         };
 
         t.set_foreground_color(Color::White);
@@ -110,7 +108,10 @@ impl Vga {
             Direction::Up => self.y = self.y.saturating_sub(1),
             Direction::Down => self.y = (self.y + 1).min(MAX_BUFFERED_LINES - 1),
             Direction::Left => self.x = self.x.saturating_sub(1),
-            Direction::Right => self.x = self.x + self.buffer.block_length(self.x, self.y + self.line_offset) as u8,
+            Direction::Right => {
+                let current_line_length = self.buffer.block_length(0, self.y + self.buffer.offset()) as u8;
+                self.x = (self.x + 1).min(current_line_length);
+            } // self.x = (self.x + 1).min(self.buffer.block_length(self.x, self.y + self.buffer.offset()) as u8),
         }
 
         unsafe {
@@ -201,14 +202,14 @@ impl Vga {
     ///     }
     /// }
     pub fn new_line(&mut self) {
-        let reached_buffer_limit = self.y == VGA_HEIGHT - 1 && self.line_offset == (MAX_BUFFERED_LINES - VGA_HEIGHT);
+        let reached_buffer_limit = self.y == VGA_HEIGHT - 1 && self.buffer.offset() == (MAX_BUFFERED_LINES - VGA_HEIGHT);
         if reached_buffer_limit {
             return;
         }
 
-        let block_length = self.buffer.block_length(0, self.y + self.line_offset);
+        let block_length = self.buffer.block_length(0, self.y + self.buffer.offset());
         let x = block_length % VGA_WIDTH as u16;
-        let y = self.y as u16 + self.line_offset as u16;
+        let y = self.y as u16 + self.buffer.offset() as u16;
         let _ = self.write_char_at(x as u8, y as u8, Buffer::NEWLINE);
 
         self.x = 0;
@@ -257,7 +258,7 @@ impl Vga {
     ///
     /// Needs to be called at every write.
     fn shift_text_right(&mut self, from_x: u8, by: u8) {
-        let block_length = self.buffer.block_length(from_x, self.y + self.line_offset);
+        let block_length = self.buffer.block_length(from_x, self.y + self.buffer.offset());
 
         for x in (from_x..(from_x + block_length as u8)).rev() {
             let x_shifted = (x + by) % VGA_WIDTH;
@@ -284,7 +285,7 @@ impl Vga {
 
     /// Flushes `self.buffer.slice(self.line_offset)` into the VGA buffer, writing it to the console.
     fn flush(&self) {
-        let current_displayed_content = self.buffer.slice(self.line_offset);
+        let current_displayed_content = self.buffer.slice(self.buffer.offset());
 
         for (idx, &entry) in current_displayed_content.iter().enumerate() {
             unsafe {
@@ -304,7 +305,7 @@ impl Vga {
         }
 
         let entry: u16 = (character as u16) | (self.color as u16) << 8;
-        let index: u16 = (y as u16 + self.line_offset as u16) * VGA_WIDTH as u16 + x as u16;
+        let index: u16 = (y as u16 + self.buffer.offset() as u16) * VGA_WIDTH as u16 + x as u16;
 
         self.buffer.write(0, index, entry);
 
@@ -317,7 +318,7 @@ impl Vga {
         let on_first_row = self.y == 0;
 
         if on_first_col && on_first_row {
-            self.line_offset = self.line_offset.saturating_sub(1);
+            self.buffer.dec_offset();
             self.x = self.get_x_for_y(self.y as usize) as u8;
         } else if on_first_col {
             self.y = self.y.saturating_sub(1);
@@ -356,11 +357,11 @@ impl Vga {
     }
 
     fn scroll_down(&mut self) {
-        if self.line_offset == MAX_BUFFERED_LINES - VGA_HEIGHT {
+        if self.buffer.offset() == MAX_BUFFERED_LINES - VGA_HEIGHT {
             return;
         }
 
-        self.line_offset = (self.line_offset + 1).min(MAX_BUFFERED_LINES - VGA_HEIGHT);
+        self.buffer.inc_offset();
         self.y = VGA_HEIGHT - 1;
 
         for x in 0..VGA_WIDTH {
@@ -373,7 +374,7 @@ impl Vga {
     /// Gets the position of the last written character for `y`, to ensure the cursor returns
     /// to the correct position when backspacing at `x == 0`.
     fn get_x_for_y(&self, y: usize) -> usize {
-        self.buffer.block_length(0, (y + self.line_offset as usize) as u8).saturating_sub(1) as usize
+        self.buffer.block_length(0, (y + self.buffer.offset() as usize) as u8).saturating_sub(1) as usize
     }
 }
 
@@ -514,7 +515,7 @@ mod test {
         v.write_u8_arr(b"Hello, World");
 
         assert_eq!(
-            v.buffer.block_length(0, v.y + v.line_offset),
+            v.buffer.block_length(0, v.y + v.buffer.offset()),
             12,
             "First character of the previous line should not be deleted when pressing enter"
         );
@@ -532,9 +533,9 @@ mod test {
 
         v.new_line();
 
-        let block_length = v.buffer.block_length(0, v.y + v.line_offset);
+        let block_length = v.buffer.block_length(0, v.y + v.buffer.offset());
         let x = block_length % VGA_WIDTH as u16;
-        let y = v.y as u16 + v.line_offset as u16;
+        let y = v.y as u16 + v.buffer.offset() as u16;
 
         assert_eq!(x, 0, "Vga::x should equal to zero here");
         assert_eq!(y, 1, "Vga::x should equal to one here");

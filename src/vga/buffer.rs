@@ -1,5 +1,7 @@
 use crate::vga::{VGA_BUFFER_SIZE, VGA_WIDTH};
 
+use super::VGA_HEIGHT;
+
 /// Amount of lines buffered in `Buffer`.
 pub const MAX_BUFFERED_LINES: u8 = 100;
 
@@ -11,6 +13,7 @@ pub const MAX_BUFFERED_LINES: u8 = 100;
 /// using `Vga::flush`.
 pub struct Buffer {
     buf: [u16; (VGA_WIDTH as usize) * (MAX_BUFFERED_LINES as usize)],
+    line_offset: u8,
 }
 
 impl Buffer {
@@ -24,6 +27,7 @@ impl Buffer {
     pub fn new() -> Self {
         Self {
             buf: [0u16; (VGA_WIDTH as usize) * (MAX_BUFFERED_LINES as usize)],
+            line_offset: 0,
         }
     }
 
@@ -72,5 +76,17 @@ impl Buffer {
 
     pub fn len(&self) -> u16 {
         self.buf.len() as u16
+    }
+
+    pub fn inc_offset(&mut self) {
+        self.line_offset = (self.line_offset + 1).min(MAX_BUFFERED_LINES - VGA_HEIGHT);
+    }
+
+    pub fn dec_offset(&mut self) {
+        self.line_offset = self.line_offset.saturating_sub(1);
+    }
+
+    pub fn offset(&self) -> u8 {
+        self.line_offset
     }
 }
