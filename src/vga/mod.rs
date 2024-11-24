@@ -53,28 +53,32 @@ pub struct OutOfBoundsError;
 
 #[derive(Clone, Copy)]
 /// Abstraction for VGA buffer interactions.
-pub struct Vga {
+pub struct Vga<'a> {
     color: u8,
     x: u8,
     y: u8,
     cursor: Cursor,
-    buffer: Buffer,
+    current_window: &'a Buffer,
+    windows: [&'a Buffer; 4],
 }
 
-impl Default for Vga {
+impl<'a> Default for Vga<'a> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Vga {
+impl<'a> Vga<'a> {
     pub fn new() -> Self {
+        let windows = [Buffer::new(); 4];
+        let current_window: &'a Buffer = &windows[0];
         let mut t = Vga {
             color: 0,
             x: 0,
             y: 0,
             cursor: Cursor {},
-            buffer: Buffer::new(),
+            current_window,
+            windows,
         };
 
         t.set_foreground_color(Color::White);
@@ -111,7 +115,7 @@ impl Vga {
             Direction::Right => {
                 let current_line_length = self.buffer.block_length(0, self.y) as u8;
                 self.x = (self.x + 1).min(current_line_length);
-            } // self.x = (self.x + 1).min(self.buffer.block_length(self.x, self.y + self.buffer.offset()) as u8),
+            }
         }
 
         unsafe {
