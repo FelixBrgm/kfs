@@ -251,7 +251,7 @@ impl Vga {
     pub fn write_char(&mut self, c: u8) {
         self.shift_text_right(self.x, 1);
 
-        let _ = self.write_char_at(self.y, self.x, c);
+        let _ = self.write_char_at(self.x, self.y, c);
         self.inc_cursor();
         self.flush();
     }
@@ -260,7 +260,7 @@ impl Vga {
     pub fn delete_char(&mut self) {
         self.dec_cursor();
 
-        let _ = self.write_char_at(self.y, self.x, 0);
+        let _ = self.write_char_at(self.x, self.y, 0);
         self.flush();
     }
 
@@ -278,9 +278,9 @@ impl Vga {
 
     /// Fills the whole VGA buffer with `0u16`, clearing the screen.
     pub fn clear_screen(&mut self) {
-        for row in 0..VGA_HEIGHT {
-            for col in 0..VGA_WIDTH {
-                let _ = self.write_char_at(row, col, 0);
+        for y in 0..VGA_HEIGHT {
+            for x in 0..VGA_WIDTH {
+                let _ = self.write_char_at(x, y, 0);
             }
         }
         self.flush();
@@ -288,16 +288,20 @@ impl Vga {
 
     /// Moves `self.y` to `self.y + 1` and `self.x` to `0`, and updates the cursor.
     pub fn new_line(&mut self) {
+        let reached_buffer_limit = self.y == VGA_HEIGHT - 1 && self.line_offset == (MAX_BUFFERED_LINES - VGA_HEIGHT);
+        if reached_buffer_limit {
+            return;
+        }
+
         let block_length = self.buffer.block_length(0, self.y + self.line_offset);
         let x = block_length % VGA_WIDTH as u16;
-        let y = block_length / VGA_WIDTH as u16;
+        let y = self.y as u16 + self.line_offset as u16;
         let _ = self.write_char_at(x as u8, y as u8, Buffer::NEWLINE);
 
         self.x = 0;
+        self.y = self.y.saturating_add(1);
 
-        if self.y < VGA_HEIGHT - 1 {
-            self.y += 1;
-        } else {
+        if self.y >= VGA_HEIGHT {
             self.scroll_down();
         }
 
@@ -334,7 +338,7 @@ impl Vga {
             let y_shifted = self.y + if (x + by) >= VGA_WIDTH { 1 } else { 0 };
 
             let current_char = self.buffer.at(self.y as u16 * VGA_WIDTH as u16 + x as u16).unwrap();
-            let _ = self.write_char_at(y_shifted, x_shifted, (*current_char & 0xFF) as u8);
+            let _ = self.write_char_at(x_shifted, y_shifted, (*current_char & 0xFF) as u8);
         }
     }
 
@@ -363,14 +367,14 @@ impl Vga {
     }
 
     /// Writes `character` at `self.x == x` and `self.y == y` into the VGA buffer.
-    fn write_char_at(&mut self, y: u8, x: u8, character: u8) -> Result<(), OutOfBoundsError> {
+    fn write_char_at(&mut self, x: u8, y: u8, character: u8) -> Result<(), OutOfBoundsError> {
         if y >= VGA_HEIGHT || x >= VGA_WIDTH {
             return Err(OutOfBoundsError);
         }
         let entry: u16 = (character as u16) | (self.color as u16) << 8;
-        let index: isize = y as isize * VGA_WIDTH as isize + x as isize;
+        let index: isize = ((y as usize + self.line_offset as usize) % MAX_BUFFERED_LINES as usize) as isize * VGA_WIDTH as isize + x as isize;
 
-        self.buffer.write(self.line_offset, index as u16, entry);
+        self.buffer.write(0, index as u16, entry);
 
         Ok(())
     }
@@ -420,7 +424,7 @@ impl Vga {
         self.y = VGA_HEIGHT - 1;
 
         for x in 0..VGA_WIDTH {
-            let _ = self.write_char_at(VGA_HEIGHT - 1, x, 0);
+            let _ = self.write_char_at(x, self.y, 0);
         }
 
         self.flush();
@@ -573,11 +577,29 @@ mod test {
         v.write_u8_arr(b"Hello, World");
 
         assert_eq!(
-            v.buffer.block_length(0, 0),
+            v.buffer.block_length(0, v.y + v.line_offset),
             12,
             "First character of the previous line should not be deleted when pressing enter"
         );
 
         v.clear_screen();
+    }
+
+    #[test]
+    fn test_newline_underflow() {
+        let _guard = VGA_BUFFER_LOCK.lock();
+
+        let mut v = Vga::new();
+
+        v.write_u8_arr(b"Hello, World");
+
+        v.new_line();
+
+        let block_length = v.buffer.block_length(0, v.y + v.line_offset);
+        let x = block_length % VGA_WIDTH as u16;
+        let y = v.y as u16 + v.line_offset as u16;
+
+        assert_eq!(x, 0, "Vga::x should equal to zero here");
+        assert_eq!(y, 1, "Vga::x should equal to one here");
     }
 }
