@@ -288,7 +288,7 @@ impl Vga {
 
     /// Moves `self.y` to `self.y + 1` and `self.x` to `0`, and updates the cursor.
     pub fn new_line(&mut self) {
-        let block_length = self.buffer.block_length(self.x, self.y);
+        let block_length = self.buffer.block_length(0, self.y + self.line_offset);
         let x = block_length % VGA_WIDTH as u16;
         let y = block_length / VGA_WIDTH as u16;
         let _ = self.write_char_at(x as u8, y as u8, Buffer::NEWLINE);
@@ -327,7 +327,7 @@ impl Vga {
     ///
     /// Needs to be called at every write.
     fn shift_text_right(&mut self, from_x: u8, by: u8) {
-        let block_length = self.buffer.block_length(from_x, self.y);
+        let block_length = self.buffer.block_length(from_x, self.y + self.line_offset);
 
         for x in (from_x..(from_x + block_length as u8)).rev() {
             let x_shifted = (x + by) % VGA_WIDTH;
@@ -498,7 +498,7 @@ mod test {
 
         assert_eq!(v.y, 0, "Vga::y should decrease by 1 when deleting a character at the beginning of a line");
         assert_eq!(
-            v.x, 12,
+            v.x, 11,
             "Vga::x should return to the last written non-null character of the previous line when deleting a line"
         );
 
@@ -539,6 +539,42 @@ mod test {
         assert_eq!(
             (v.buffer.buf[0] & 0xFF) as u8,
             b'H',
+            "First character of the previous line should not be deleted when pressing enter"
+        );
+
+        v.clear_screen();
+    }
+
+    #[test]
+    fn test_2_newlines_on_first_line() {
+        let _guard = VGA_BUFFER_LOCK.lock();
+
+        let mut v = Vga::new();
+
+        v.write_u8_arr(b"Hello, World");
+        v.new_line();
+        v.new_line();
+
+        assert_eq!(
+            (v.buffer.buf[0] & 0xFF) as u8,
+            b'H',
+            "First character of the previous line should not be deleted when pressing enter"
+        );
+
+        v.clear_screen();
+    }
+
+    #[test]
+    fn test_block_length_first_line() {
+        let _guard = VGA_BUFFER_LOCK.lock();
+
+        let mut v = Vga::new();
+
+        v.write_u8_arr(b"Hello, World");
+
+        assert_eq!(
+            v.buffer.block_length(0, 0),
+            12,
             "First character of the previous line should not be deleted when pressing enter"
         );
 
