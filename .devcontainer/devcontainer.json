@@ -1,9 +1,5 @@
 {
     "name": "kfs",
-    "runArgs": [
-        "--name",
-        "dev-kfs"
-    ],
     "dockerFile": "Dockerfile",
     "mounts": [
         "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind,consistency=cached",
