@@ -411,6 +411,8 @@ mod test {
 
     #[test]
     fn test_new_vga() {
+        let _guard = VGA_BUFFER_LOCK.lock();
+
         let v = Vga::new();
 
         assert_eq!(v.x, 0, "Vga::x should be initialized to 0");
@@ -425,6 +427,8 @@ mod test {
 
     #[test]
     fn test_line_wrap() {
+        let _guard = VGA_BUFFER_LOCK.lock();
+
         let mut v = Vga::new();
 
         for _ in 0..VGA_WIDTH {
