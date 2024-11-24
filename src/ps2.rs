@@ -27,6 +27,13 @@ fn buffer_full() -> bool {
 /// if the converted scancode is a supported character.
 ///
 /// If `terminal` is not `None`, uses it to display the scancodes on keyboard inputs.
+/// /// ### Example Usage:
+/// ```
+/// let mut v = Vga::new();
+///
+/// if let Some(c) = read_if_ready(None) == 'a' as u8 {
+///     v.write_char(b'a');
+/// }
 pub fn read_if_ready(terminal: Option<&mut Vga>) -> Option<char> {
     if !buffer_full() {
         return None;
@@ -54,8 +61,11 @@ pub fn read_if_ready(terminal: Option<&mut Vga>) -> Option<char> {
 /// Reads from `port` and returns the extracted value.
 /// ## SAFETY:
 /// `port` is assumed to be one of `PS2_STATUS_PORT` or `PS2_DATA_PORT`. Passing another value
-/// to this function will result in undefines behavior.
+/// to this function will result in a panic.
+///
 unsafe fn read(port: u16) -> u8 {
+    assert!(port == PS2_DATA_PORT || port == PS2_STATUS_PORT);
+
     let res: u8;
 
     asm!(
@@ -333,3 +343,16 @@ const SCANCODE_TO_ASCII: [Option<char>; 256] = [
     None,
     None,
 ];
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn read_from_random_port() {
+        unsafe {
+            read(0x66);
+        }
+    }
+}
