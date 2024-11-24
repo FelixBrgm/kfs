@@ -1,4 +1,7 @@
-use crate::vga::{MAX_BUFFERED_LINES, VGA_BUFFER_SIZE, VGA_WIDTH};
+use crate::vga::{VGA_BUFFER_SIZE, VGA_WIDTH};
+
+/// Amount of lines buffered in `Buffer`.
+pub const MAX_BUFFERED_LINES: u8 = 100;
 
 #[derive(Clone, Copy)]
 /// Buffer implementation for storing content beyond the VGA buffer size of 4000 bytes (80 x 25

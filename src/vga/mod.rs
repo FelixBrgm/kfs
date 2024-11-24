@@ -1,4 +1,8 @@
-use crate::vga::{buffer::Buffer, color::Color, cursor::Cursor};
+use crate::vga::{
+    buffer::{Buffer, MAX_BUFFERED_LINES},
+    color::Color,
+    cursor::Cursor,
+};
 use core::ptr::write_volatile;
 
 mod buffer;
@@ -8,25 +12,32 @@ mod cursor;
 #[cfg(test)]
 use spin::Mutex;
 
+/// Maximum width of the [VGA buffer](https://wiki.osdev.org/Text_UI).
 pub const VGA_WIDTH: u8 = 80;
+/// Maximum height of the [VGA buffer](https://wiki.osdev.org/Text_UI).
 pub const VGA_HEIGHT: u8 = 25;
+/// Maximum amount of `u16` entries in the VGA buffer.
 pub const VGA_BUFFER_SIZE: u16 = (VGA_WIDTH as u16) * (VGA_HEIGHT as u16);
-pub const MAX_BUFFERED_LINES: u8 = 100;
 
 #[cfg(test)]
-static mut VGA_BUFFER_ADDR: [u16; VGA_WIDTH as usize * VGA_HEIGHT as usize] = [0; VGA_WIDTH as usize * VGA_HEIGHT as usize];
+/// Statically allocated array of size `[u16; 2000]`, used to simulate the VGA buffer in test mode.
+static mut MOCK_VGA_BUFFER: [u16; VGA_WIDTH as usize * VGA_HEIGHT as usize] = [0; VGA_WIDTH as usize * VGA_HEIGHT as usize];
 
 #[cfg(not(test))]
+/// Address of the [VGA buffer](https://wiki.osdev.org/Text_UI), can be directly written to to
+/// display characters in kernel-mode.
 const VGA_BUFFER_ADDR: *mut u16 = 0xB8000 as *mut u16;
 
 #[cfg(test)]
 #[allow(static_mut_refs)]
+/// Returns `MOCK_VGA_BUFFER` as `*mut u16` for simulations in test mode.
 fn get_vga_buffer_ptr() -> *mut u16 {
-    unsafe { VGA_BUFFER_ADDR.as_mut_ptr() }
+    unsafe { MOCK_VGA_BUFFER.as_mut_ptr() }
 }
 
 #[allow(unused)]
 #[derive(PartialEq, Eq)]
+/// Represents a direction, used for moving the cursor.
 pub enum Direction {
     Up,
     Down,
@@ -35,6 +46,7 @@ pub enum Direction {
 }
 
 #[cfg(test)]
+/// Mutex used to prevent concurrent access to `MOCK_VGA_BUFFER` in tests.
 static VGA_BUFFER_LOCK: Mutex<()> = Mutex::new(());
 
 pub struct OutOfBoundsError;
@@ -81,6 +93,18 @@ impl Vga {
 
     /// Moves cursor in `dir`. Supports moving up and down, though this is not enabled by default in `kernel_main`,
     /// as this is more of a text editing than terminal feature.
+    /// ### Example Usage:
+    /// ```
+    /// let mut v = Vga::new();
+    ///
+    /// loop {
+    ///     if let Some(c) = ps2::read_if_ready(None) {
+    ///         if c == ps2::ARROW_LEFT {
+    ///             v.move_cursor(Direction::Left);
+    ///         }
+    ///     }
+    /// }
+    /// ```
     pub fn move_cursor(&mut self, dir: Direction) {
         match dir {
             Direction::Up => self.y = self.y.saturating_sub(1),
@@ -95,6 +119,12 @@ impl Vga {
     }
 
     /// Writes a character to the VGA buffer at `self.x, self.y` and increments its cursor.
+    /// ### Example Usage:
+    /// ```
+    /// let mut v = Vga::new();
+    ///
+    /// v.write_char(b'6');
+    /// ```
     pub fn write_char(&mut self, c: u8) {
         self.shift_text_right(self.x, 1);
 
@@ -141,7 +171,14 @@ impl Vga {
         self.flush();
     }
 
-    /// Fills the whole VGA buffer with `0u16`, clearing the screen.
+    /// Fills the whole VGA buffer with `0u16`, clearing the screen. This should generally be used
+    /// at the beginning of `kernel_main` to clear out leftover output from Grub.
+    /// ### Example Usage:
+    /// ```
+    /// let mut v = Vga::new();
+    ///
+    /// v.clear_screen();
+    /// ```
     pub fn clear_screen(&mut self) {
         for y in 0..VGA_HEIGHT {
             for x in 0..VGA_WIDTH {
@@ -152,6 +189,17 @@ impl Vga {
     }
 
     /// Moves `self.y` to `self.y + 1` and `self.x` to `0`, and updates the cursor.
+    /// ### Example Usage:
+    /// ```
+    /// let mut v = Vga::new();
+    ///
+    /// loop {
+    ///     if let Some(c) = ps2::read_if_ready(None) {
+    ///         if c == ps2::ENTER {
+    ///             v.new_line();
+    ///         }
+    ///     }
+    /// }
     pub fn new_line(&mut self) {
         let reached_buffer_limit = self.y == VGA_HEIGHT - 1 && self.line_offset == (MAX_BUFFERED_LINES - VGA_HEIGHT);
         if reached_buffer_limit {
@@ -185,7 +233,7 @@ impl Vga {
     /// ```
     /// let mut v = Vga::new();
     ///
-    /// v.set_foreground_color(Vga::Color::White);
+    /// v.set_foreground_color(Color::White);
     /// ```
     pub fn set_foreground_color(&mut self, foreground: Color) {
         self.color &= 0xF0;
@@ -194,6 +242,12 @@ impl Vga {
 
     /// Sets the 4 least significant bits of `self.color` to `background`, setting the
     /// background color of the VGA buffer.
+    /// ### Example Usage:
+    /// ```
+    /// let mut v = Vga::new();
+    ///
+    /// v.set_background_color(Color::Black);
+    /// ```
     pub fn set_background_color(&mut self, background: Color) {
         self.color &= 0x0F;
         self.color |= background.to_background();
