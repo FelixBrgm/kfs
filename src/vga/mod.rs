@@ -454,7 +454,7 @@ mod test {
 
         v.write_u8_arr(b"Hello, World");
         unsafe {
-            let buf = &VGA_BUFFER_ADDR[0..12];
+            let buf = &MOCK_VGA_BUFFER[0..12];
 
             let mut written_content: [u8; 12] = [0u8; 12];
 
