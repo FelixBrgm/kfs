@@ -141,6 +141,8 @@ pub struct Buffer {
 }
 
 impl Buffer {
+    const NEWLINE: u8 = 0xFF;
+
     pub fn new() -> Self {
         Self {
             buf: [0u16; (VGA_WIDTH as usize) * (MAX_BUFFERED_LINES as usize)],
@@ -166,6 +168,14 @@ impl Buffer {
 
     pub fn at(&self, pos: u16) -> Option<&u16> {
         self.buf.get(pos as usize)
+    }
+
+    pub fn block_length(&self, from_x: u8, from_y: u8) -> u16 {
+        let slice = &self.buf[from_y as usize * VGA_WIDTH as usize + from_x as usize..];
+        if let Some(ind) = slice.iter().position(|x| *x == Buffer::NEWLINE as u16) {
+            return ind as u16;
+        }
+        slice.iter().position(|x| (*x & 0xFF) == 0).unwrap() as u16
     }
 }
 
@@ -224,8 +234,11 @@ impl Vga {
 
     /// Writes a character to the VGA buffer at `self.x, self.y` and increments its cursor.
     pub fn write_char(&mut self, c: u8) {
+        self.shift_text_right(self.x, 1);
+
         let _ = self.write_char_at(self.y, self.x, c);
         self.inc_cursor();
+        self.flush();
     }
 
     /// Deletes the character from the VGA buffer at `self.x, self.y` and decrements the cursor.
@@ -233,6 +246,7 @@ impl Vga {
         self.dec_cursor();
 
         let _ = self.write_char_at(self.y, self.x, 0);
+        self.flush();
     }
 
     #[allow(unused)]
@@ -244,6 +258,7 @@ impl Vga {
             }
             self.write_char(*c);
         }
+        self.flush();
     }
 
     /// Fills the whole VGA buffer with `0u16`, clearing the screen.
@@ -253,10 +268,12 @@ impl Vga {
                 let _ = self.write_char_at(row, col, 0);
             }
         }
+        self.flush();
     }
 
     /// Moves `self.y` to `self.y + 1` and `self.x` to `0`, and updates the cursor.
     pub fn new_line(&mut self) {
+        self.write_char(Buffer::NEWLINE);
         self.y += 1;
         self.x = 0;
 
@@ -284,6 +301,21 @@ impl Vga {
     pub fn set_background_color(&mut self, background: Color) {
         self.color &= 0x0F;
         self.color |= background.to_background();
+    }
+
+    /// Shifts the text back if a write is happening in the middle of a text block. Else, does nothing.
+    ///
+    /// Needs to be called at every write.
+    fn shift_text_right(&mut self, from_x: u8, by: u8) {
+        let block_length = self.buffer.block_length(from_x, self.y);
+
+        for x in (from_x..(from_x + block_length as u8)).rev() {
+            let x_shifted = (x + by) % VGA_WIDTH;
+            let y_shifted = self.y + if (x + by) >= VGA_WIDTH { 1 } else { 0 };
+
+            let current_char = self.buffer.at(self.y as u16 * VGA_WIDTH as u16 + x as u16).unwrap();
+            let _ = self.write_char_at(y_shifted, x_shifted, (*current_char & 0xFF) as u8);
+        }
     }
 
     /// Abstraction around the VGA buffer address to avoid invalid memory access when running
@@ -320,7 +352,6 @@ impl Vga {
 
         self.buffer.write(self.line_offset, index as u16, entry);
 
-        self.flush();
         Ok(())
     }
 
