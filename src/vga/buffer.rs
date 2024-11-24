@@ -41,8 +41,8 @@ impl Buffer {
     ///
     /// v.buffer.write(v.line_offset, 20, 0);
     /// ```
-    pub fn write(&mut self, line_offset: u8, rel_index: u16, entry: u16) {
-        let abs_index: usize = (line_offset as usize * VGA_WIDTH as usize) + rel_index as usize;
+    pub fn write(&mut self, rel_index: u16, entry: u16) {
+        let abs_index: usize = (self.line_offset as usize * VGA_WIDTH as usize) + rel_index as usize;
 
         if abs_index as u16 >= self.len() {
             return;

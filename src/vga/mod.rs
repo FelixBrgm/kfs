@@ -305,9 +305,9 @@ impl Vga {
         }
 
         let entry: u16 = (character as u16) | (self.color as u16) << 8;
-        let index: u16 = (y as u16 + self.buffer.offset() as u16) * VGA_WIDTH as u16 + x as u16;
+        let index: u16 = (y as u16) * VGA_WIDTH as u16 + x as u16;
 
-        self.buffer.write(0, index, entry);
+        self.buffer.write(index, entry);
 
         Ok(())
     }
@@ -374,7 +374,7 @@ impl Vga {
     /// Gets the position of the last written character for `y`, to ensure the cursor returns
     /// to the correct position when backspacing at `x == 0`.
     fn get_x_for_y(&self, y: usize) -> usize {
-        self.buffer.block_length(0, (y as usize) as u8).saturating_sub(1) as usize
+        self.buffer.block_length(0, y as u8).saturating_sub(1) as usize
     }
 }
 
