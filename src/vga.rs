@@ -233,9 +233,9 @@ impl Vga {
 
     pub fn move_cursor(&mut self, dir: Direction) {
         match dir {
-            Direction::Up => self.y = (self.y - 1).max(0),
-            Direction::Down => self.y = (self.y + 1).min(MAX_BUFFERED_LINES),
-            Direction::Left => self.x = (self.x - 1).max(0),
+            Direction::Up => self.y = self.y.saturating_sub(1),
+            Direction::Down => self.y = (self.y + 1).min(MAX_BUFFERED_LINES - 1),
+            Direction::Left => self.x = self.x.saturating_sub(1),
             Direction::Right => self.x = (self.x + 1).min(VGA_WIDTH - 1),
         }
 
@@ -373,10 +373,10 @@ impl Vga {
         let on_first_row = self.y == 0;
 
         if on_first_col && on_first_row {
-            self.line_offset = (self.line_offset - 1).max(0);
+            self.line_offset = self.line_offset.saturating_sub(1);
             self.x = self.get_x_for_y(self.y as usize) as u8;
         } else if on_first_col {
-            self.y = (self.y - 1).max(0);
+            self.y = self.y.saturating_sub(1);
             self.x = self.get_x_for_y(self.y as usize) as u8;
         } else {
             self.x -= 1;
