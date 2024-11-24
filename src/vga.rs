@@ -52,7 +52,6 @@ fn get_vga_buffer_ptr() -> *mut u16 {
     unsafe { VGA_BUFFER_ADDR.as_mut_ptr() }
 }
 
-#[allow(dead_code)]
 #[derive(PartialEq, Eq)]
 pub enum Direction {
     Up,
@@ -170,7 +169,6 @@ impl Buffer {
     }
 }
 
-#[allow(unused)]
 #[derive(Clone, Copy)]
 /// Abstraction for VGA buffer interactions.
 pub struct Vga {
