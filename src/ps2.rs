@@ -25,7 +25,7 @@ fn buffer_full() -> bool {
 
 /// Reads from the PS2 data port if the PS2 status port is ready. Returns `Some(char)`
 /// if the converted scancode is a supported character.
-/// 
+///
 /// If `terminal` is not `None`, uses it to display the scancodes on keyboard inputs.
 pub fn read_if_ready(terminal: Option<&mut Vga>) -> Option<char> {
     if !buffer_full() {
