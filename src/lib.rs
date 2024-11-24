@@ -24,7 +24,7 @@ pub extern "C" fn kernel_main() {
     t.clear_screen();
 
     loop {
-        if let Some(char) = ps2::read_if_ready(&mut t, true) {
+        if let Some(char) = ps2::read_if_ready(Some(&mut t)) {
             if char == ps2::BACKSPACE {
                 t.delete_char();
             } else if char == ps2::ENTER {

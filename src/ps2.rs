@@ -25,22 +25,24 @@ fn buffer_full() -> bool {
 
 /// Reads from the PS2 data port if the PS2 status port is ready. Returns `Some(char)`
 /// if the converted scancode is a supported character.
-pub fn read_if_ready(t: &mut Vga, display_code: bool) -> Option<char> {
+/// 
+/// If `terminal` is not `None`, uses it to display the scancodes on keyboard inputs.
+pub fn read_if_ready(terminal: Option<&mut Vga>) -> Option<char> {
     if !buffer_full() {
         return None;
     }
 
     let code = unsafe { read(PS2_DATA_PORT) };
 
-    // if display_code {
-    //     let conv = print::u64_to_base(code as u64, 10).unwrap();
-    //     let buf = conv.1;
-    //     let len = conv.0;
-    //     let num_slice = &buf[buf.len() - len..];
-    //     t.write_char(b'|');
-    //     t.write_u8_arr(num_slice);
-    //     t.write_char(b'|');
-    // }
+    if let Some(term) = terminal {
+        let conv = print::u64_to_base(code as u64, 10).unwrap();
+        let buf = conv.1;
+        let len = conv.0;
+        let num_slice = &buf[buf.len() - len..];
+        term.write_char(b'|');
+        term.write_u8_arr(num_slice);
+        term.write_char(b'|');
+    }
 
     if let Some(char) = SCANCODE_TO_ASCII.get(code as usize).and_then(|&opt| opt) {
         return Some(char);
