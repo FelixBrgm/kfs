@@ -52,6 +52,7 @@ fn get_vga_buffer_ptr() -> *mut u16 {
     unsafe { VGA_BUFFER_ADDR.as_mut_ptr() }
 }
 
+#[allow(unused)]
 #[derive(PartialEq, Eq)]
 pub enum Direction {
     Up,
@@ -231,12 +232,14 @@ impl Vga {
         t
     }
 
+    /// Moves cursor in `dir`. Supports moving up and down, though this is not enabled by default in `kernel_main`,
+    /// as this is more of a text editing than terminal feature.
     pub fn move_cursor(&mut self, dir: Direction) {
         match dir {
             Direction::Up => self.y = self.y.saturating_sub(1),
             Direction::Down => self.y = (self.y + 1).min(MAX_BUFFERED_LINES - 1),
             Direction::Left => self.x = self.x.saturating_sub(1),
-            Direction::Right => self.x = (self.x + 1).min(VGA_WIDTH - 1),
+            Direction::Right => self.x = self.x + self.buffer.block_length(self.x, self.y + self.line_offset) as u8,
         }
 
         unsafe {
@@ -285,11 +288,16 @@ impl Vga {
 
     /// Moves `self.y` to `self.y + 1` and `self.x` to `0`, and updates the cursor.
     pub fn new_line(&mut self) {
-        self.write_char(Buffer::NEWLINE);
-        self.y += 1;
+        let block_length = self.buffer.block_length(self.x, self.y);
+        let x = block_length % VGA_WIDTH as u16;
+        let y = block_length / VGA_WIDTH as u16;
+        let _ = self.write_char_at(x as u8, y as u8, Buffer::NEWLINE);
+
         self.x = 0;
 
-        if self.y >= VGA_HEIGHT {
+        if self.y < VGA_HEIGHT - 1 {
+            self.y += 1;
+        } else {
             self.scroll_down();
         }
 
@@ -411,13 +419,17 @@ impl Vga {
         self.line_offset = (self.line_offset + 1).min(MAX_BUFFERED_LINES - VGA_HEIGHT);
         self.y = VGA_HEIGHT - 1;
 
+        for x in 0..VGA_WIDTH {
+            let _ = self.write_char_at(VGA_HEIGHT - 1, x, 0);
+        }
+
         self.flush();
     }
 
     /// Gets the position of the last written character for `y`, to ensure the cursor returns
     /// to the correct position when backspacing at `x == 0`.
     fn get_x_for_y(&self, y: usize) -> usize {
-        (self.buffer.block_length(0, y as u8) - 1) as usize
+        (self.buffer.block_length(0, (y + self.line_offset as usize) as u8).saturating_sub(1)) as usize
     }
 }
 
@@ -511,6 +523,24 @@ mod test {
 
             assert_eq!(&written_content, b"Hello, World", "Content has not been written to VGA_BUFFER_ADDR");
         }
+
+        v.clear_screen();
+    }
+
+    #[test]
+    fn test_newline_on_first_line() {
+        let _guard = VGA_BUFFER_LOCK.lock();
+
+        let mut v = Vga::new();
+
+        v.write_u8_arr(b"Hello, World");
+        v.new_line();
+
+        assert_eq!(
+            (v.buffer.buf[0] & 0xFF) as u8,
+            b'H',
+            "First character of the previous line should not be deleted when pressing enter"
+        );
 
         v.clear_screen();
     }

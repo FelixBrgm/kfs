@@ -31,12 +31,9 @@ pub extern "C" fn kernel_main() {
                 t.new_line();
             } else if char == ps2::ARROW_LEFT {
                 t.move_cursor(vga::Direction::Left);
-            } else if char == ps2::ARROW_UP {
-                t.move_cursor(vga::Direction::Up);
             } else if char == ps2::ARROW_RIGHT {
                 t.move_cursor(vga::Direction::Right);
-            } else if char == ps2::ARROW_DOWN {
-                t.move_cursor(vga::Direction::Down);
+            } else if char == ps2::ARROW_UP || char == ps2::ARROW_DOWN {
             } else {
                 t.write_char(char as u8);
             }
