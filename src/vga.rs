@@ -417,7 +417,7 @@ impl Vga {
         let mut pos: u16 = (y as u16 + self.line_offset as u16) * VGA_WIDTH as u16 + (VGA_WIDTH as u16 - 1);
 
         while pos > (y as u16 + self.line_offset as u16) * VGA_WIDTH as u16 {
-            if (self.buffer.at(pos).unwrap() & 0xFF) != 0 {
+            if (self.buffer.at(pos).unwrap() & 0xFF) != 0 && (self.buffer.at(pos).unwrap() & 0xFF) != Buffer::NEWLINE as u16 {
                 return pos as usize % VGA_WIDTH as usize + 1;
             }
 
