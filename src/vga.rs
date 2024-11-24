@@ -212,14 +212,11 @@ impl Vga {
     }
 
     pub fn move_cursor(&mut self, dir: Direction) {
-        if dir == Direction::Up {
-            self.y = cmp::max(self.y - 1, 0);
-        } else if dir == Direction::Down {
-            self.y = cmp::min(self.y + 1, MAX_BUFFERED_LINES);
-        } else if dir == Direction::Left {
-            self.x = cmp::max(self.x - 1, 0);
-        } else {
-            self.x = cmp::min(self.x + 1, VGA_WIDTH - 1);
+        match dir {
+            Direction::Up => self.y = cmp::max(self.y - 1, 0),
+            Direction::Down => self.y = cmp::min(self.y + 1, MAX_BUFFERED_LINES),
+            Direction::Left => self.x = cmp::max(self.x - 1, 0),
+            Direction::Right => self.x = cmp::min(self.x + 1, VGA_WIDTH - 1),
         }
 
         unsafe {
