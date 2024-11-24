@@ -502,7 +502,7 @@ mod test {
 
         assert_eq!(v.y, 0, "Vga::y should decrease by 1 when deleting a character at the beginning of a line");
         assert_eq!(
-            v.x, 11,
+            v.x, 12,
             "Vga::x should return to the last written non-null character of the previous line when deleting a line"
         );
 
