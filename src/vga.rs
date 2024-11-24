@@ -149,7 +149,7 @@ impl Buffer {
     }
 
     pub fn write(&mut self, line_offset: u8, rel_index: u16, entry: u16) {
-        let abs_index: usize = (((line_offset as usize * VGA_WIDTH as usize) + rel_index as usize) % self.buf.len()) as usize;
+        let abs_index: usize = ((line_offset as usize * VGA_WIDTH as usize) + rel_index as usize) % self.buf.len();
 
         self.buf[abs_index] = entry;
     }
@@ -310,7 +310,7 @@ impl Vga {
 
         for (idx, &entry) in current_displayed_content.iter().enumerate() {
             unsafe {
-                write_volatile(self.get_buffer_addr().offset(idx as isize), entry);
+                write_volatile(self.get_buffer_addr().add(idx), entry);
             }
         }
     }
