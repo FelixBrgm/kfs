@@ -43,7 +43,7 @@ debug-iso: all
 	grub-mkrescue -v -o $(BUILD_DIR)/$(NAME).iso $(BUILD_DIR)/iso
 
 debug: debug-iso
-	qemu-system-i386 -cdrom $(BUILD_DIR)/$(NAME).iso -boot d
+	qemu-system-i386 -cdrom $(BUILD_DIR)/$(NAME).iso -boot d -curses
 
 crash: debug-iso
 	qemu-system-i386 -cdrom $(BUILD_DIR)/$(NAME).iso -boot d -d int -no-reboot -no-shutdown
