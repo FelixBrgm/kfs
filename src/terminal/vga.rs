@@ -1,6 +1,6 @@
 use core::ptr::{read_volatile, write_volatile};
 
-use super::terminal::Terminal;
+use super::{cursor::Cursor, terminal::Terminal};
 
 pub const VIEW_WIDTH: usize = 80;
 pub const VIEW_HEIGHT: usize = 25;
@@ -9,7 +9,7 @@ const VGA_BUFFER_ADDR: *mut u16 = 0xB8000 as *mut u16;
 
 pub fn flush_vga(t: &Terminal) {
     let mut view_offset: usize = 0;
-    for (mut index, &entry) in t.buffer.iter().enumerate() {
+    for (mut index, &entry) in t.buffer.iter().enumerate().skip(t.view_index) {
         index += view_offset;
         if index >= VIEW_BUFFER_SIZE {
             break;
@@ -20,13 +20,10 @@ pub fn flush_vga(t: &Terminal) {
             continue;
         }
 
-        let written_entry = read_entry_from_vga(index).unwrap(); // Have to think about how we want to handle this
-        if entry == written_entry {
-            continue;
-        }
-
-        write_entry_to_vga(index, entry).unwrap(); // Same here have to check if thats fine
+        write_entry_to_vga(index, entry).unwrap(); // Same here have to check if thats fine\
     }
+    let c = Cursor {};
+    unsafe { c.update_pos(((t.cursor + view_offset) % VIEW_WIDTH) as u16, ((t.cursor + view_offset) / VIEW_WIDTH) as u16) };
 }
 
 #[derive(Debug)]
@@ -35,6 +32,11 @@ pub struct OutOfBoundsErr;
 fn write_entry_to_vga(index: usize, entry: u16) -> Result<(), OutOfBoundsErr> {
     if index >= VIEW_BUFFER_SIZE {
         return Err(OutOfBoundsErr);
+    }
+
+    let written_entry = read_entry_from_vga(index).unwrap(); // Have to think about how we want to handle this
+    if entry == written_entry {
+        return Ok(());
     }
 
     unsafe { write_volatile(VGA_BUFFER_ADDR.add(index), entry) }

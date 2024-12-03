@@ -9,6 +9,7 @@ pub struct Terminal {
     // ad a iter from viewport
     pub buffer: [u16; BUFFER_SIZE],
     pub cursor: usize,
+    pub view_index: usize,
 }
 
 impl Terminal {
@@ -16,6 +17,7 @@ impl Terminal {
         Terminal {
             buffer: [Entry::new(b' ').to_u16(); BUFFER_SIZE],
             cursor: 0,
+            view_index: 0
         }
     }
 
