@@ -17,6 +17,13 @@ pub fn flush_vga(t: &Terminal) {
 
         if (entry & 0xFF) as u8 == b'\n' {
             view_offset += VIEW_WIDTH - (index % VIEW_WIDTH) - 1;
+            let mut i = index;
+            let mut first = true;
+            while first || i % VIEW_WIDTH != 0{
+                first = false;
+                write_entry_to_vga(i, Entry::new(b' ').to_u16()).unwrap();
+                i+=1;
+            }
             continue;
         }
 

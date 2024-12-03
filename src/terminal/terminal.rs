@@ -17,7 +17,7 @@ impl Terminal {
         Terminal {
             buffer: [Entry::new(b' ').to_u16(); BUFFER_SIZE],
             cursor: 0,
-            view_index: 0
+            view_index: 0,
         }
     }
 
@@ -29,13 +29,25 @@ impl Terminal {
         } else if key == Key::Space {
             self.write(b' ');
         } else if key == Key::Backspace {
-            self.cursor -= 1;
+            if self.cursor > 0 {
+                self.cursor -= 1;
+            }
             self.remove_entry_at(self.cursor);
+        } else if key == Key::ArrowRight {
+            self.cursor += 1;
+        } else if key == Key::ArrowLeft {
+            self.cursor -= 1;
         }
     }
 
     pub fn write(&mut self, character: u8) {
+        let mut index = BUFFER_SIZE - 2;
+        while index + 1 > self.cursor {
+            self.buffer[index + 1] = self.buffer[index];
+            index -= 1;
+        }
         self.buffer[self.cursor] = Entry::new(character).to_u16();
+
         self.cursor += 1;
     }
 
