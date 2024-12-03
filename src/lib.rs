@@ -1,5 +1,7 @@
 #![no_std]
 
+use terminal::{ps2::Key, terminal::Terminal};
+
 #[no_mangle]
 static GDT_LIMIT: usize = 3;
 #[no_mangle]
@@ -26,9 +28,10 @@ pub extern "C" fn kernel_main() {
 
 pub fn start_terminal() {
     let mut t = terminal::terminal::Terminal::new();
+    t.flush();
     loop {
-        if let Some(char) = ps2::read_if_ready() {
-            t.write(char as u8);
+        if let Some(key) = terminal::ps2::read_if_ready() {
+            t.handle_key(key);
             t.flush();
         }
     }
