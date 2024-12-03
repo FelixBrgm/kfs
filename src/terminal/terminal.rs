@@ -36,7 +36,9 @@ impl Terminal {
         } else if key == Key::ArrowRight {
             self.cursor += 1;
         } else if key == Key::ArrowLeft {
-            self.cursor -= 1;
+            if self.cursor > 0 {
+                self.cursor -= 1;
+            }
         }
     }
 

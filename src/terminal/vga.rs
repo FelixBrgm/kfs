@@ -10,11 +10,16 @@ const VGA_BUFFER_ADDR: *mut u16 = 0xB8000 as *mut u16;
 pub fn flush_vga(t: &Terminal) {
     let mut view_offset: usize = 0;
     for (mut index, &entry) in t.buffer.iter().enumerate().skip(t.view_index) {
+        if index <= t.cursor && (index + VIEW_WIDTH) > t.cursor {
+            let c = Cursor {};
+            unsafe { c.update_pos(((t.cursor + view_offset) % VIEW_WIDTH) as u16, ((t.cursor + view_offset) / VIEW_WIDTH) as u16) };
+        }
         index += view_offset;
         if index >= VIEW_BUFFER_SIZE {
             break;
         }
 
+        
         if (entry & 0xFF) as u8 == b'\n' {
             view_offset += VIEW_WIDTH - (index % VIEW_WIDTH) - 1;
             let mut i = index;
@@ -29,8 +34,7 @@ pub fn flush_vga(t: &Terminal) {
 
         write_entry_to_vga(index, entry).unwrap(); // Same here have to check if thats fine\
     }
-    let c = Cursor {};
-    unsafe { c.update_pos(((t.cursor + view_offset) % VIEW_WIDTH) as u16, ((t.cursor + view_offset) / VIEW_WIDTH) as u16) };
+   
 }
 
 #[derive(Debug)]
