@@ -1,4 +1,4 @@
-mod ps2;
-mod vga;
 mod entry;
-mod terminal;
+mod ps2;
+pub mod terminal;
+mod vga;
