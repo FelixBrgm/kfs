@@ -8,33 +8,45 @@ pub const VIEW_BUFFER_SIZE: usize = VIEW_WIDTH * VIEW_HEIGHT;
 const VGA_BUFFER_ADDR: *mut u16 = 0xB8000 as *mut u16;
 
 pub fn flush_vga(t: &Terminal) {
-    let mut view_offset: usize = 0;
-    for (mut index, &entry) in t.buffer.iter().enumerate().skip(t.view_index) {
-        if index <= t.cursor && (index + VIEW_WIDTH) > t.cursor {
-            let c = Cursor {};
-            unsafe { c.update_pos(((t.cursor + view_offset) % VIEW_WIDTH) as u16, ((t.cursor + view_offset) / VIEW_WIDTH) as u16) };
-        }
-        index += view_offset;
-        if index >= VIEW_BUFFER_SIZE {
-            break;
-        }
+    let mut view_padding_whitespace: usize = 0;
 
+    for (relative_index, &entry) in t.buffer.iter().skip(t.view_start_index).enumerate() {
+        let padded_relative_index = relative_index + view_padding_whitespace;
+
+        let index_after_viewport = padded_relative_index >= VIEW_BUFFER_SIZE;
+        if index_after_viewport {
+            return;
+        }
         
-        if (entry & 0xFF) as u8 == b'\n' {
-            view_offset += VIEW_WIDTH - (index % VIEW_WIDTH) - 1;
-            let mut i = index;
-            let mut first = true;
-            while first || i % VIEW_WIDTH != 0{
-                first = false;
-                write_entry_to_vga(i, Entry::new(b' ').to_u16()).unwrap();
-                i+=1;
+        let relative_cursor = t.cursor - t.view_start_index;
+        let padded_relative_cursor = relative_cursor + view_padding_whitespace;
+        let cursor_on_this_row = padded_relative_index <= padded_relative_cursor && padded_relative_cursor < padded_relative_index + VIEW_WIDTH;
+        if cursor_on_this_row {
+            let relative_cursor_is_pos = t.cursor >= t.view_start_index;
+            if relative_cursor_is_pos && padded_relative_cursor < VIEW_BUFFER_SIZE {
+                write_entry_to_vga(0, Entry::new(b'O').to_u16());
+                unsafe {
+                    let c = Cursor {};
+                    c.update_pos(
+                        (padded_relative_cursor as usize % VIEW_WIDTH) as u16,
+                        (padded_relative_cursor as usize / VIEW_WIDTH) as u16,
+                    )
+                };
             }
-            continue;
         }
 
-        write_entry_to_vga(index, entry).unwrap(); // Same here have to check if thats fine\
+        match (entry & 0xFF) as u8 {
+            b'\n' => {
+                let padding = VIEW_WIDTH - (padded_relative_index % VIEW_WIDTH) - 1;
+                view_padding_whitespace += padding;
+
+                for i in 0..padding {
+                    write_entry_to_vga(padded_relative_index + i, Entry::new(b' ').to_u16()).unwrap();
+                }
+            }
+            _ => write_entry_to_vga(padded_relative_index, entry).unwrap(),
+        }
     }
-   
 }
 
 #[derive(Debug)]
@@ -83,4 +95,18 @@ impl Entry {
 #[repr(u8)]
 enum Color {
     Default = 0x07,
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn testing() {
+        let v = [0, 1, 2, 3, 4];
+        for (i, e) in v.iter().skip(2).enumerate() {
+            
+        }
+        ;
+    }
 }

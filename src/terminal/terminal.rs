@@ -9,7 +9,7 @@ pub struct Terminal {
     // ad a iter from viewport
     pub buffer: [u16; BUFFER_SIZE],
     pub cursor: usize,
-    pub view_index: usize,
+    pub view_start_index: usize,
 }
 
 impl Terminal {
@@ -17,7 +17,7 @@ impl Terminal {
         Terminal {
             buffer: [Entry::new(b' ').to_u16(); BUFFER_SIZE],
             cursor: 0,
-            view_index: 0,
+            view_start_index: 0,
         }
     }
 
@@ -38,6 +38,34 @@ impl Terminal {
         } else if key == Key::ArrowLeft {
             if self.cursor > 0 {
                 self.cursor -= 1;
+            }
+        } else if key == Key::ArrowDown {
+            self.scroll(1);
+        } else if key == Key::ArrowUp {
+            self.scroll(-1);
+        }
+    }
+
+    pub fn scroll(&mut self, delta: isize) {
+        if delta < 0 {
+            let absolute = 0 - delta;
+            for _ in 0..absolute {
+                let mut last_newline_index = 0;
+                for (i, e) in self.buffer.iter().enumerate() {
+                    if (e & 0xFF) as u8 == b'\n' && self.view_start_index > i {
+                        last_newline_index = i - 1;
+                    }
+                }
+                self.view_start_index = last_newline_index;
+            }
+        } else {
+            for _ in 0..delta {
+                for (i, e) in self.buffer.iter().enumerate() {
+                    if (e & 0xFF) as u8 == b'\n' && self.view_start_index <= i {
+                        self.view_start_index = i + 1;
+                        break;
+                    }
+                }
             }
         }
     }
