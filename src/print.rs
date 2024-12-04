@@ -1,5 +1,5 @@
 #[allow(unused)]
-pub fn u64_to_base(mut addr: u64, base: u8) -> Result<(usize, [u8; 65]), ()> {
+pub fn u64_to_base(mut addr: u64, base: u8) -> Result<([u8; 65], usize), ()> {
     if !(2..=16).contains(&base) {
         return Err(());
     }
@@ -21,7 +21,7 @@ pub fn u64_to_base(mut addr: u64, base: u8) -> Result<(usize, [u8; 65]), ()> {
 
     let len = buf.len() - idx;
 
-    Ok((len, buf))
+    Ok((buf, len))
 }
 
 #[cfg(test)]
