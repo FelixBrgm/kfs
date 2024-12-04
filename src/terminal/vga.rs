@@ -91,13 +91,3 @@ impl Entry {
 enum Color {
     Default = 0x07,
 }
-
-#[cfg(test)]
-mod test {
-    
-    #[test]
-    fn testing() {
-        let v = [0, 1, 2, 3, 4];
-        for (i, e) in v.iter().skip(2).enumerate() {}
-    }
-}
