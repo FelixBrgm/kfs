@@ -1,7 +1,5 @@
 use core::ptr::{read_volatile, write_volatile};
 
-use crate::print::u64_to_base;
-
 use super::{cursor::Cursor, terminal::Terminal};
 
 pub const VIEW_WIDTH: usize = 80;
