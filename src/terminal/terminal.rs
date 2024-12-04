@@ -6,7 +6,6 @@ use super::{
 const BUFFER_SIZE: usize = 1000;
 
 pub struct Terminal {
-    // ad a iter from viewport
     pub buffer: [u16; BUFFER_SIZE],
     pub cursor: usize,
     pub view_start_index: usize,
