@@ -1,12 +1,28 @@
 use core::ptr::{read_volatile, write_volatile};
 
-use super::{cursor::Cursor, terminal::Terminal};
+use super::{cursor::Cursor, Terminal};
 
+/// The `width` of the viewable area of the VGA Buffer in chars
 pub const VIEW_WIDTH: usize = 80;
+
+/// The `height` of the viewable area of the VGA Buffer in chars
 pub const VIEW_HEIGHT: usize = 25;
+
+/// The total number of character positions in the viewable area (width x height).
 pub const VIEW_BUFFER_SIZE: usize = VIEW_WIDTH * VIEW_HEIGHT;
+
+/// The base memory address of the VGA buffer for text mode display.
 const VGA_BUFFER_ADDR: *mut u16 = 0xB8000 as *mut u16;
 
+/// Flushes the contents of the terminal buffer to the VGA screen, rendering characters, handling newlines,
+/// and updating the cursor position. It checks for viewport boundaries and ensures the terminal's contents
+/// are properly displayed at the current viewport position.
+/// ### Parameters:
+/// - `t`: A reference to the `Terminal` struct that holds the terminal's buffer, cursor, and viewport state.
+///
+/// ### Notes:
+/// - If the cursor is not inside the viewport, it will stay at the last valid position inside the viewport.
+/// - This function ensures that the view area does not overflow beyond the `VIEW_BUFFER_SIZE`.
 pub fn flush_vga(t: &Terminal) {
     let mut view_padding_whitespace: usize = 0;
 
@@ -35,10 +51,7 @@ pub fn flush_vga(t: &Terminal) {
         if relative_cursor == relative_index {
             unsafe {
                 let c = Cursor {};
-                c.update_pos(
-                    (padded_relative_cursor % VIEW_WIDTH) as u16,
-                    (padded_relative_cursor / VIEW_WIDTH) as u16,
-                )
+                c.update_pos((padded_relative_cursor % VIEW_WIDTH) as u16, (padded_relative_cursor / VIEW_WIDTH) as u16)
             };
         }
     }
@@ -47,6 +60,18 @@ pub fn flush_vga(t: &Terminal) {
 #[derive(Debug)]
 pub struct OutOfBoundsErr;
 
+/// Writes an entry (a `u16` value) to the VGA buffer at the specified index.
+///
+/// This function ensures that an entry is only written if it's different from the existing one at that index.
+/// It checks for the current value at the index and only performs the write if there's a change.
+///
+/// ### Parameters:
+/// - `index`: The index in the VGA buffer to which the entry should be written.
+/// - `entry`: The `u16` entry to be written to the VGA buffer.
+///
+/// ### Returns:
+/// - `Ok(())` if the write is successful.
+/// - `Err(OutOfBoundsErr)` if the index is out of bounds.
 fn write_entry_to_vga(index: usize, entry: u16) -> Result<(), OutOfBoundsErr> {
     if index >= VIEW_BUFFER_SIZE {
         return Err(OutOfBoundsErr);
@@ -61,6 +86,14 @@ fn write_entry_to_vga(index: usize, entry: u16) -> Result<(), OutOfBoundsErr> {
     Ok(())
 }
 
+/// Reads an entry (a `u16` value) from the VGA buffer at the specified index.
+///
+/// ### Parameters:
+/// - `index`: The index in the VGA buffer to read from.
+///
+/// ### Returns:
+/// - `Ok(u16)` if the read is successful.
+/// - `Err(OutOfBoundsErr)` if the index is out of bounds.
 fn read_entry_from_vga(index: usize) -> Result<u16, OutOfBoundsErr> {
     if index >= VIEW_BUFFER_SIZE {
         return Err(OutOfBoundsErr);
@@ -69,12 +102,23 @@ fn read_entry_from_vga(index: usize) -> Result<u16, OutOfBoundsErr> {
     Ok(e)
 }
 
+/// Represents a single character entry for the terminal buffer.
+///
+/// Each `Entry` consists of a character and a color attribute. The color is set to the default color (light gray on black)
+/// by default, but it can be customized. Each `Entry` can be converted into a `u16` value, which is the format used for
+/// writing to the VGA buffer.
 pub struct Entry {
     color: u8,
     character: u8,
 }
 
 impl Entry {
+    /// Creates a new `Entry` with the specified character and the default color.
+    ///
+    /// The default color is light gray (`0x07`).
+    ///
+    /// ### Parameters:
+    /// - `character`: The character to be storedy.
     pub fn new(character: u8) -> Self {
         Entry {
             color: Color::Default as u8,
@@ -82,12 +126,23 @@ impl Entry {
         }
     }
 
+    /// Converts this `Entry` into a `u16` value that can be written to the VGA buffer.
+    ///
+    /// The `u16` format stores the color in the upper 8 bits and the character in the lower 8 bits.
+    ///
+    /// ### Returns:
+    /// A `u16` value representing this `Entry`.
     pub fn to_u16(&self) -> u16 {
         ((self.color as u16) << 8) | (self.character as u16)
     }
 }
 
+/// Represents the available color codes for terminal entries.
+///
+/// The colors are defined as `u8` values, where each value corresponds to a particular color.
+/// The default color is light gray on black.
 #[repr(u8)]
 enum Color {
-    Default = 0x07,
+    /// Light gray on black (default)
+    Default = 0x07, // 
 }

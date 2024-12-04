@@ -6,7 +6,6 @@ mod print;
 mod terminal;
 
 #[no_mangle]
-#[allow(clippy::empty_loop)]
 pub extern "C" fn kernel_main() {
     let mut t = terminal::Terminal::new();
     t.flush();
