@@ -9,50 +9,15 @@ pub const VIEW_HEIGHT: usize = 25;
 pub const VIEW_BUFFER_SIZE: usize = VIEW_WIDTH * VIEW_HEIGHT;
 const VGA_BUFFER_ADDR: *mut u16 = 0xB8000 as *mut u16;
 
-pub fn write_str(s: &[u8], row: usize) {
-    for (i, &c) in s.iter().enumerate() {
-        write_entry_to_vga(i + VIEW_WIDTH * row, Entry::new(c).to_u16());
-    }
-}
-
-pub fn write_usize(n: usize, row: usize) {
-    write_str(&(u64_to_base(n as u64, 10).unwrap().1), row);
-}
-
 pub fn flush_vga(t: &Terminal) {
     let mut view_padding_whitespace: usize = 0;
     let mut counter = 10;
     for (relative_index, &entry) in t.buffer.iter().skip(t.view_start_index).enumerate() {
         let padded_relative_index = relative_index + view_padding_whitespace;
+
         let index_after_viewport = padded_relative_index >= VIEW_BUFFER_SIZE;
         if index_after_viewport {
             return;
-        }
-
-        let relative_cursor = t.cursor - t.view_start_index;
-
-        let padded_relative_cursor = relative_cursor + view_padding_whitespace;
-        let cursor_on_this_row = padded_relative_index <= padded_relative_cursor && padded_relative_cursor < padded_relative_index + VIEW_WIDTH;
-        if cursor_on_this_row {
-            write_usize(counter, 3);
-            counter +=1;
-            write_usize(relative_cursor, 4);
-            write_usize(view_padding_whitespace, 5);
-
-            write_usize(padded_relative_index, 6);
-            write_usize(padded_relative_cursor, 7);
-
-
-            let relative_cursor_is_pos = t.cursor >= t.view_start_index;
-            if relative_cursor_is_pos && padded_relative_cursor < VIEW_BUFFER_SIZE {
-                unsafe {
-                    let c = Cursor {};
-                    c.update_pos(
-                        (padded_relative_cursor as usize % VIEW_WIDTH) as u16,
-                        (padded_relative_cursor as usize / VIEW_WIDTH) as u16,
-                    )
-                };
-            }
         }
 
         match (entry & 0xFF) as u8 {
@@ -64,7 +29,19 @@ pub fn flush_vga(t: &Terminal) {
                     write_entry_to_vga(padded_relative_index + i, Entry::new(b' ').to_u16()).unwrap();
                 }
             }
-            _ => {} // _ => write_entry_to_vga(padded_relative_index, entry).unwrap(),
+            _ => write_entry_to_vga(padded_relative_index, entry).unwrap(),
+        }
+
+        let relative_cursor = t.cursor - t.view_start_index;
+        let padded_relative_cursor = relative_cursor + view_padding_whitespace;
+        if relative_cursor == relative_index {
+            unsafe {
+                let c = Cursor {};
+                c.update_pos(
+                    (padded_relative_cursor as usize % VIEW_WIDTH) as u16,
+                    (padded_relative_cursor as usize / VIEW_WIDTH) as u16,
+                )
+            };
         }
     }
 }
