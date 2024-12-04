@@ -34,6 +34,15 @@ pub fn flush_vga(t: &Terminal) {
             return;
         }
 
+        let relative_cursor = t.cursor - t.view_start_index;
+        let padded_relative_cursor = relative_cursor + view_padding_whitespace;
+        if relative_cursor == relative_index {
+            unsafe {
+                let c = Cursor {};
+                c.update_pos((padded_relative_cursor % VIEW_WIDTH) as u16, (padded_relative_cursor / VIEW_WIDTH) as u16)
+            };
+        }
+        
         match (entry & 0xFF) as u8 {
             b'\n' => {
                 let padding = VIEW_WIDTH - (padded_relative_index % VIEW_WIDTH) - 1;
@@ -46,14 +55,6 @@ pub fn flush_vga(t: &Terminal) {
             _ => write_entry_to_vga(padded_relative_index, entry).unwrap(),
         }
 
-        let relative_cursor = t.cursor - t.view_start_index;
-        let padded_relative_cursor = relative_cursor + view_padding_whitespace;
-        if relative_cursor == relative_index {
-            unsafe {
-                let c = Cursor {};
-                c.update_pos((padded_relative_cursor % VIEW_WIDTH) as u16, (padded_relative_cursor / VIEW_WIDTH) as u16)
-            };
-        }
     }
 }
 
