@@ -11,7 +11,7 @@ const VGA_BUFFER_ADDR: *mut u16 = 0xB8000 as *mut u16;
 
 pub fn flush_vga(t: &Terminal) {
     let mut view_padding_whitespace: usize = 0;
-    let mut counter = 10;
+
     for (relative_index, &entry) in t.buffer.iter().skip(t.view_start_index).enumerate() {
         let padded_relative_index = relative_index + view_padding_whitespace;
 
