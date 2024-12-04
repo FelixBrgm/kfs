@@ -36,8 +36,8 @@ pub fn flush_vga(t: &Terminal) {
             unsafe {
                 let c = Cursor {};
                 c.update_pos(
-                    (padded_relative_cursor as usize % VIEW_WIDTH) as u16,
-                    (padded_relative_cursor as usize / VIEW_WIDTH) as u16,
+                    (padded_relative_cursor % VIEW_WIDTH) as u16,
+                    (padded_relative_cursor / VIEW_WIDTH) as u16,
                 )
             };
         }
@@ -94,7 +94,7 @@ enum Color {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    
     #[test]
     fn testing() {
         let v = [0, 1, 2, 3, 4];

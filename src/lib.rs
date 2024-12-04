@@ -1,6 +1,5 @@
 #![no_std]
 
-use terminal::{ps2::Key, terminal::Terminal};
 
 #[no_mangle]
 static GDT_LIMIT: usize = 3;
