@@ -66,7 +66,7 @@ mod u64_to_base_test {
 
         let res = match u64_to_base(num, 16) {
             Ok((len, buf)) => (len, buf),
-            _ => (0, [0u8; 65]),
+            _ => ([0u8; 65], 0),
         };
 
         let result_slice = &res.1[65 - res.0..];
@@ -82,7 +82,7 @@ mod u64_to_base_test {
 
         let res = match u64_to_base(num, 16) {
             Ok((len, buf)) => (len, buf),
-            _ => (0, [0u8; 65]),
+            _ => ([0u8; 65], 0),
         };
 
         let result_slice = &res.1[65 - res.0..];
