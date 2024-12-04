@@ -126,6 +126,21 @@ impl Entry {
         }
     }
 
+    /// Creates a new `Entry` with the specified character and custom color.
+    ///
+    /// This function allows the creation of a `Entry` with a specific character and color,
+    /// where the color is passed as a parameter. The color is represented as an 8-bit value,
+    /// allowing for a wide range of color codes (e.g., for terminal colors). The character
+    /// is displayed with this color when rendered to the VGA buffer.
+    ///
+    /// ### Parameters:
+    /// - `character`: The character to be displayed (e.g., an ASCII value representing a letter or symbol).
+    /// - `color`: The color code for the character (an 8-bit value that determines the character's color).
+    ///   - The value should correspond to a color in the VGA color palette (for example, `0x0F` for white, `0x01` for blue, etc.).
+    pub fn new_with_color(character: u8, color: u8) -> Self {
+        Entry { color, character }
+    }
+
     /// Converts this `Entry` into a `u16` value that can be written to the VGA buffer.
     ///
     /// The `u16` format stores the color in the upper 8 bits and the character in the lower 8 bits.
@@ -142,7 +157,9 @@ impl Entry {
 /// The colors are defined as `u8` values, where each value corresponds to a particular color.
 /// The default color is light gray on black.
 #[repr(u8)]
-enum Color {
+pub enum Color {
     /// Light gray on black (default)
-    Default = 0x07, // 
+    Default = 0x07,
+    /// White on Red
+    Error = 0x4F,
 }

@@ -1,6 +1,6 @@
 use super::{
     ps2::Key,
-    vga::{flush_vga, Entry},
+    vga::{flush_vga, Color, Entry},
 };
 
 const BUFFER_SIZE: usize = 1000;
@@ -34,7 +34,9 @@ impl Terminal {
             }
             self.remove_entry_at(self.cursor);
         } else if key == Key::ArrowRight {
-            self.cursor += 1;
+            if self.cursor < BUFFER_SIZE - 1 {
+                self.cursor += 1;
+            }
         } else if key == Key::ArrowLeft {
             if self.cursor > 0 {
                 self.cursor -= 1;
@@ -71,12 +73,19 @@ impl Terminal {
     }
 
     pub fn write(&mut self, character: u8) {
+        self.write_color(character, Color::Default as u8);
+    }
+
+    pub fn write_color(&mut self, character: u8, color: u8) {
+        if self.cursor >= BUFFER_SIZE - 1 {
+            return;
+        }
         let mut index = BUFFER_SIZE - 2;
         while index + 1 > self.cursor {
             self.buffer[index + 1] = self.buffer[index];
             index -= 1;
         }
-        self.buffer[self.cursor] = Entry::new(character).to_u16();
+        self.buffer[self.cursor] = Entry::new_with_color(character, color).to_u16();
 
         self.cursor += 1;
     }

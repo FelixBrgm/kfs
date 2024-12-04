@@ -6,3 +6,4 @@ mod terminal;
 mod vga;
 
 pub use terminal::Terminal;
+pub use vga::Color;
