@@ -9,6 +9,7 @@ pub struct Terminal {
     pub buffer: [u16; BUFFER_SIZE],
     pub cursor: usize,
     pub last_entry_index: usize,
+    pub rows_scrolled: usize
 }
 
 impl Terminal {
@@ -17,6 +18,7 @@ impl Terminal {
             buffer: [Entry::new(b' ').to_u16(); BUFFER_SIZE],
             cursor: 0,
             last_entry_index: 0,
+            rows_scrolled: 0
         }
     }
 
@@ -41,34 +43,20 @@ impl Terminal {
                 self.cursor -= 1;
             }
         } else if key == Key::ArrowDown {
-            self.scroll(1);
-        } else if key == Key::ArrowUp {
             self.scroll(-1);
+        } else if key == Key::ArrowUp {
+            self.scroll(1);
         }
     }
 
     pub fn scroll(&mut self, delta: isize) {
-        // if delta < 0 {
-        //     let absolute = 0 - delta;
-        //     for _ in 0..absolute {
-        //         let mut last_newline_index = 0;
-        //         for (i, e) in self.buffer.iter().enumerate() {
-        //             if (e & 0xFF) as u8 == b'\n' && self.view_start_index > i {
-        //                 last_newline_index = i - 1;
-        //             }
-        //         }
-        //         self.last_entry_index = last_newline_index;
-        //     }
-        // } else {
-        //     for _ in 0..delta {
-        //         for (i, e) in self.buffer.iter().enumerate() {
-        //             if (e & 0xFF) as u8 == b'\n' && self.last_entry_index <= i {
-        //                 self.last_entry_index = i + 1;
-        //                 break;
-        //             }
-        //         }
-        //     }
-        // }
+        if delta >= 0 {
+            self.rows_scrolled += delta as usize;
+        }else if delta < 0 && delta.abs() as usize <= self.rows_scrolled {
+            self.rows_scrolled -= delta.abs() as usize;
+        } else {
+            self.rows_scrolled = 0;
+        }
     }
 
     pub fn write(&mut self, character: u8) {
@@ -85,6 +73,7 @@ impl Terminal {
             index -= 1;
         }
 
+        self.rows_scrolled = 0;
         self.last_entry_index += 1;
         self.buffer[self.cursor] = Entry::new_with_color(character, color).to_u16();
 

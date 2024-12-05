@@ -40,7 +40,8 @@ pub fn flush_vga(t: &Terminal) {
     let view_start_index = calculate_view_start_index(t);
     for (relative_index, &entry) in t.buffer.iter().skip(view_start_index).enumerate() {
         let padded_relative_index = relative_index + view_padding_whitespace;
-        write_usize(calculate_view_start_index(t), 20);
+        // write_usize(calculate_view_start_index(t), 20);
+        // write_usize(t.rows_scrolled, 21);
         let index_after_viewport = padded_relative_index >= VIEW_BUFFER_SIZE;
         if index_after_viewport {
             return;
@@ -103,7 +104,12 @@ fn calculate_view_start_index(t: &Terminal) -> usize {
             break;
         }
     }
-    if row_position_last <= VIEW_HEIGHT -1 {
+    if row_position_last < t.rows_scrolled {
+        row_position_last = 0;
+    } else {
+        row_position_last -= t.rows_scrolled;
+    }
+    if row_position_last <= VIEW_HEIGHT - 1 {
         0
     } else {
         rows[row_position_last - (VIEW_HEIGHT - 1)].0
