@@ -7,6 +7,11 @@ pub fn u64_to_base(mut addr: u64, base: u8) -> Result<([u8; 65], usize), ()> {
     let mut buf: [u8; 65] = [0; 65];
     let digits: &[u8; 16] = b"0123456789ABCDEF";
 
+    if addr == 0 {
+        buf[64] = b'0' as u8;
+        return Ok((buf, 1));
+    }
+    
     let mut idx = buf.len();
 
     while addr != 0 && idx > 0 {

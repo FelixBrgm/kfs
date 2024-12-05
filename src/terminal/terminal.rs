@@ -3,12 +3,12 @@ use super::{
     vga::{flush_vga, Color, Entry},
 };
 
-const BUFFER_SIZE: usize = 1000;
+pub const BUFFER_SIZE: usize = 1000;
 
 pub struct Terminal {
     pub buffer: [u16; BUFFER_SIZE],
     pub cursor: usize,
-    pub view_start_index: usize,
+    pub last_entry_index: usize,
 }
 
 impl Terminal {
@@ -16,7 +16,7 @@ impl Terminal {
         Terminal {
             buffer: [Entry::new(b' ').to_u16(); BUFFER_SIZE],
             cursor: 0,
-            view_start_index: 0,
+            last_entry_index: 0,
         }
     }
 
@@ -33,7 +33,7 @@ impl Terminal {
             }
             self.remove_entry_at(self.cursor);
         } else if key == Key::ArrowRight {
-            if self.cursor < BUFFER_SIZE - 1 {
+            if self.cursor < BUFFER_SIZE - 1 && self.cursor <= self.last_entry_index {
                 self.cursor += 1;
             }
         } else if key == Key::ArrowLeft {
@@ -48,27 +48,27 @@ impl Terminal {
     }
 
     pub fn scroll(&mut self, delta: isize) {
-        if delta < 0 {
-            let absolute = 0 - delta;
-            for _ in 0..absolute {
-                let mut last_newline_index = 0;
-                for (i, e) in self.buffer.iter().enumerate() {
-                    if (e & 0xFF) as u8 == b'\n' && self.view_start_index > i {
-                        last_newline_index = i - 1;
-                    }
-                }
-                self.view_start_index = last_newline_index;
-            }
-        } else {
-            for _ in 0..delta {
-                for (i, e) in self.buffer.iter().enumerate() {
-                    if (e & 0xFF) as u8 == b'\n' && self.view_start_index <= i {
-                        self.view_start_index = i + 1;
-                        break;
-                    }
-                }
-            }
-        }
+        // if delta < 0 {
+        //     let absolute = 0 - delta;
+        //     for _ in 0..absolute {
+        //         let mut last_newline_index = 0;
+        //         for (i, e) in self.buffer.iter().enumerate() {
+        //             if (e & 0xFF) as u8 == b'\n' && self.view_start_index > i {
+        //                 last_newline_index = i - 1;
+        //             }
+        //         }
+        //         self.last_entry_index = last_newline_index;
+        //     }
+        // } else {
+        //     for _ in 0..delta {
+        //         for (i, e) in self.buffer.iter().enumerate() {
+        //             if (e & 0xFF) as u8 == b'\n' && self.last_entry_index <= i {
+        //                 self.last_entry_index = i + 1;
+        //                 break;
+        //             }
+        //         }
+        //     }
+        // }
     }
 
     pub fn write(&mut self, character: u8) {
@@ -84,6 +84,8 @@ impl Terminal {
             self.buffer[index + 1] = self.buffer[index];
             index -= 1;
         }
+
+        self.last_entry_index += 1;
         self.buffer[self.cursor] = Entry::new_with_color(character, color).to_u16();
 
         self.cursor += 1;
@@ -98,6 +100,7 @@ impl Terminal {
             self.buffer[index] = self.buffer[index + 1];
             index += 1;
         }
+        self.last_entry_index -= 1;
         self.buffer[index] = Entry::new(b' ').to_u16();
     }
 }

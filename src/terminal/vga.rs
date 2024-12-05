@@ -1,6 +1,8 @@
 use core::ptr::{read_volatile, write_volatile};
 
-use super::{cursor::Cursor, Terminal};
+use crate::print::u64_to_base;
+
+use super::{cursor::Cursor, terminal::BUFFER_SIZE, Terminal};
 
 /// The `width` of the viewable area of the VGA Buffer in chars
 pub const VIEW_WIDTH: usize = 80;
@@ -14,6 +16,15 @@ pub const VIEW_BUFFER_SIZE: usize = VIEW_WIDTH * VIEW_HEIGHT;
 /// The base memory address of the VGA buffer for text mode display.
 const VGA_BUFFER_ADDR: *mut u16 = 0xB8000 as *mut u16;
 
+pub fn write_str(s: &[u8], row: usize) {
+    for (i, &c) in s.iter().enumerate() {
+        write_entry_to_vga(i + VIEW_WIDTH * row, Entry::new(c).to_u16());
+    }
+}
+pub fn write_usize(n: usize, row: usize) {
+    write_str(&(u64_to_base(n as u64, 10).unwrap().0), row);
+}
+
 /// Flushes the contents of the terminal buffer to the VGA screen, rendering characters, handling newlines,
 /// and updating the cursor position. It checks for viewport boundaries and ensures the terminal's contents
 /// are properly displayed at the current viewport position.
@@ -26,15 +37,16 @@ const VGA_BUFFER_ADDR: *mut u16 = 0xB8000 as *mut u16;
 pub fn flush_vga(t: &Terminal) {
     let mut view_padding_whitespace: usize = 0;
 
-    for (relative_index, &entry) in t.buffer.iter().skip(t.view_start_index).enumerate() {
+    let view_start_index = calculate_view_start_index(t);
+    for (relative_index, &entry) in t.buffer.iter().skip(view_start_index).enumerate() {
         let padded_relative_index = relative_index + view_padding_whitespace;
-
+        write_usize(calculate_view_start_index(t), 20);
         let index_after_viewport = padded_relative_index >= VIEW_BUFFER_SIZE;
         if index_after_viewport {
             return;
         }
 
-        let relative_cursor = t.cursor - t.view_start_index;
+        let relative_cursor = t.cursor - view_start_index;
         let padded_relative_cursor = relative_cursor + view_padding_whitespace;
         if relative_cursor == relative_index {
             unsafe {
@@ -42,19 +54,59 @@ pub fn flush_vga(t: &Terminal) {
                 c.update_pos((padded_relative_cursor % VIEW_WIDTH) as u16, (padded_relative_cursor / VIEW_WIDTH) as u16)
             };
         }
-        
+
         match (entry & 0xFF) as u8 {
             b'\n' => {
                 let padding = VIEW_WIDTH - (padded_relative_index % VIEW_WIDTH) - 1;
                 view_padding_whitespace += padding;
 
-                for i in 0..padding {
+                for i in 0..(padding + 1) {
                     write_entry_to_vga(padded_relative_index + i, Entry::new(b' ').to_u16()).unwrap();
                 }
             }
             _ => write_entry_to_vga(padded_relative_index, entry).unwrap(),
         }
+    }
+}
 
+fn calculate_view_start_index(t: &Terminal) -> usize {
+    let mut rows: [(usize, usize); BUFFER_SIZE] = [(0, 0); BUFFER_SIZE];
+    let mut index_rows = 0;
+
+    let mut current_line = (0, 0);
+    for (i, e) in t.buffer.iter().enumerate() {
+        if current_line == (0, 0) {
+            current_line.0 = i;
+        }
+        if (current_line.1 - current_line.0) == (VIEW_WIDTH - 1) {
+            rows[index_rows] = current_line;
+            index_rows += 1;
+            current_line = (0, 0);
+            continue;
+        }
+        match (e & 0xFF) as u8 {
+            b'\n' => {
+                current_line.1 = i;
+                rows[index_rows] = current_line;
+                index_rows += 1;
+                current_line = (0, 0);
+            }
+            _ => {
+                current_line.1 = i;
+            }
+        }
+    }
+    let mut row_position_last = 0;
+    for (i, (start, end)) in rows.iter().enumerate() {
+        if *start <= t.last_entry_index && t.last_entry_index <= *end {
+            row_position_last = i;
+            break;
+        }
+    }
+    if row_position_last <= VIEW_HEIGHT -1 {
+        0
+    } else {
+        rows[row_position_last - (VIEW_HEIGHT - 1)].0
     }
 }
 
