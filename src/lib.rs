@@ -16,7 +16,6 @@ pub extern "C" fn kernel_main() {
     let string = slice_to_str((&slice, len)).unwrap();
     t.write_str(string);
     t.write_str("\n");
-
     t.flush();
     loop {
         if let Some(key) = terminal::ps2::read_if_ready() {
