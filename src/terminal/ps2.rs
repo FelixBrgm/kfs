@@ -61,7 +61,7 @@ unsafe fn read(port: u16) -> u8 {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, PartialOrd)]
 pub enum Key {
     Tab,
     Enter,

@@ -2,7 +2,10 @@ use core::ptr::{read_volatile, write_volatile};
 
 use crate::print::u64_to_base;
 
-use super::{cursor::Cursor, terminal::BUFFER_SIZE, Terminal};
+use super::{
+    cursor::Cursor,
+    screen::{Screen, BUFFER_SIZE},
+};
 
 /// The `width` of the viewable area of the VGA Buffer in chars
 pub const VIEW_WIDTH: usize = 80;
@@ -25,16 +28,22 @@ pub fn write_usize(n: usize, row: usize) {
     write_str(&(u64_to_base(n as u64, 10).unwrap().0), row);
 }
 
-/// Flushes the contents of the terminal buffer to the VGA screen, rendering characters, handling newlines,
-/// and updating the cursor position. It checks for viewport boundaries and ensures the terminal's contents
+/// Flushes the contents of the screen buffer to the VGA screen, rendering characters, handling newlines,
+/// and updating the cursor position. It checks for viewport boundaries and ensures the screen's contents
 /// are properly displayed at the current viewport position.
 /// ### Parameters:
-/// - `t`: A reference to the `Terminal` struct that holds the terminal's buffer, cursor, and viewport state.
+/// - `t`: A reference to the `Screen` struct that holds the screen's buffer, cursor, and viewport state.
 ///
 /// ### Notes:
 /// - If the cursor is not inside the viewport, it will stay at the last valid position inside the viewport.
 /// - This function ensures that the view area does not overflow beyond the `VIEW_BUFFER_SIZE`.
-pub fn flush_vga(t: &Terminal) {
+pub fn flush_vga(t: &Screen) {
+    for x in 0..VIEW_WIDTH {
+        for y in 0..VIEW_HEIGHT {
+            write_entry_to_vga(x + VIEW_WIDTH * y, Entry::new(b' ').to_u16()).unwrap();
+        }
+    }
+
     let mut view_padding_whitespace: usize = 0;
 
     let view_start_index = calculate_view_start_index(t);
@@ -70,7 +79,7 @@ pub fn flush_vga(t: &Terminal) {
     }
 }
 
-fn calculate_view_start_index(t: &Terminal) -> usize {
+fn calculate_view_start_index(t: &Screen) -> usize {
     let mut rows: [(usize, usize); BUFFER_SIZE] = [(0, 0); BUFFER_SIZE];
     let mut index_rows = 0;
 
@@ -161,7 +170,7 @@ fn read_entry_from_vga(index: usize) -> Result<u16, OutOfBoundsErr> {
     Ok(e)
 }
 
-/// Represents a single character entry for the terminal buffer.
+/// Represents a single character entry for the Screen buffer.
 ///
 /// Each `Entry` consists of a character and a color attribute. The color is set to the default color (light gray on black)
 /// by default, but it can be customized. Each `Entry` can be converted into a `u16` value, which is the format used for
@@ -189,7 +198,7 @@ impl Entry {
     ///
     /// This function allows the creation of a `Entry` with a specific character and color,
     /// where the color is passed as a parameter. The color is represented as an 8-bit value,
-    /// allowing for a wide range of color codes (e.g., for terminal colors). The character
+    /// allowing for a wide range of color codes (e.g., for screen colors). The character
     /// is displayed with this color when rendered to the VGA buffer.
     ///
     /// ### Parameters:
@@ -211,7 +220,7 @@ impl Entry {
     }
 }
 
-/// Represents the available color codes for terminal entries.
+/// Represents the available color codes for screen entries.
 ///
 /// The colors are defined as `u8` values, where each value corresponds to a particular color.
 /// The default color is light gray on black.

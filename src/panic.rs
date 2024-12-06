@@ -7,10 +7,8 @@ use crate::terminal::Color;
 fn panic(_info: &PanicInfo) -> ! {
     use crate::terminal::Terminal;
 
-    let mut t = Terminal::new();
-    for &c in "Paniced!".as_bytes().iter() {
-        t.write_color(c, Color::Error as u8);
-    }
+    let mut t = Terminal::default();
+    t.write_color_str("Paniced!", Color::Error as u8);
     t.flush();
     loop {}
 }
