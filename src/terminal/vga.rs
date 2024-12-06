@@ -1,6 +1,5 @@
 use core::ptr::{read_volatile, write_volatile};
 
-use crate::print::u64_to_base;
 
 use super::{
     cursor::Cursor,
@@ -18,15 +17,6 @@ pub const VIEW_BUFFER_SIZE: usize = VIEW_WIDTH * VIEW_HEIGHT;
 
 /// The base memory address of the VGA buffer for text mode display.
 const VGA_BUFFER_ADDR: *mut u16 = 0xB8000 as *mut u16;
-
-pub fn write_str(s: &[u8], row: usize) {
-    for (i, &c) in s.iter().enumerate() {
-        let _ = write_entry_to_vga(i + VIEW_WIDTH * row, Entry::new(c).to_u16());
-    }
-}
-pub fn write_usize(n: usize, row: usize) {
-    write_str(&(u64_to_base(n as u64, 10).unwrap().0), row);
-}
 
 /// Flushes the contents of the screen buffer to the VGA screen, rendering characters, handling newlines,
 /// and updating the cursor position. It checks for viewport boundaries and ensures the screen's contents

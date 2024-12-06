@@ -1,6 +1,6 @@
 use core::panic::PanicInfo;
 
-use crate::terminal::Color;
+use crate::terminal::vga::Color;
 
 #[cfg(not(test))]
 #[panic_handler]
