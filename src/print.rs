@@ -1,4 +1,17 @@
-#[allow(unused)]
+use core::str;
+
+#[derive(Debug)]
+pub struct ParseError;
+
+pub fn slice_to_str((slice, len): (&[u8; 65], usize)) -> Result<&str, ParseError> {
+    let real_part = &slice[65 - len..65];
+
+    match str::from_utf8(real_part) {
+        Ok(s) => Ok(s),
+        Err(_) => Err(ParseError),
+    }
+}
+
 pub fn u64_to_base(mut addr: u64, base: u8) -> Result<([u8; 65], usize), ()> {
     if !(2..=16).contains(&base) {
         return Err(());
@@ -11,7 +24,7 @@ pub fn u64_to_base(mut addr: u64, base: u8) -> Result<([u8; 65], usize), ()> {
         buf[64] = b'0' as u8;
         return Ok((buf, 1));
     }
-    
+
     let mut idx = buf.len();
 
     while addr != 0 && idx > 0 {

@@ -74,7 +74,6 @@ impl Screen {
             index -= 1;
         }
 
-        self.rows_scrolled = 0;
         self.last_entry_index += 1;
         self.buffer[self.cursor] = Entry::new_with_color(character, color).to_u16();
 
