@@ -21,7 +21,7 @@ const VGA_BUFFER_ADDR: *mut u16 = 0xB8000 as *mut u16;
 
 pub fn write_str(s: &[u8], row: usize) {
     for (i, &c) in s.iter().enumerate() {
-        write_entry_to_vga(i + VIEW_WIDTH * row, Entry::new(c).to_u16());
+        let _ = write_entry_to_vga(i + VIEW_WIDTH * row, Entry::new(c).to_u16());
     }
 }
 pub fn write_usize(n: usize, row: usize) {
