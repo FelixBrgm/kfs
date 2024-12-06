@@ -53,8 +53,8 @@ impl Screen {
     pub fn scroll(&mut self, delta: isize) {
         if delta >= 0 {
             self.rows_scrolled += delta as usize;
-        } else if delta < 0 && delta.abs() as usize <= self.rows_scrolled {
-            self.rows_scrolled -= delta.abs() as usize;
+        } else if delta < 0 && delta.unsigned_abs() <= self.rows_scrolled {
+            self.rows_scrolled -= delta.unsigned_abs();
         } else {
             self.rows_scrolled = 0;
         }

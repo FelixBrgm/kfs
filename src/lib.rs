@@ -1,6 +1,5 @@
 #![no_std]
 
-use core::str;
 
 use print::{slice_to_str, u64_to_base};
 
@@ -12,7 +11,7 @@ mod terminal;
 #[no_mangle]
 pub extern "C" fn kernel_main() {
     let mut t = terminal::Terminal::default();
-    let (slice, len) = u64_to_base(42 as u64, 10).unwrap();
+    let (slice, len) = u64_to_base(42_u64, 10).unwrap();
     let string = slice_to_str((&slice, len)).unwrap();
     t.write_str(string);
     t.write_str("\n");

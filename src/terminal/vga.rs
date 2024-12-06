@@ -118,7 +118,7 @@ fn calculate_view_start_index(t: &Screen) -> usize {
     } else {
         row_position_last -= t.rows_scrolled;
     }
-    if row_position_last <= VIEW_HEIGHT - 1 {
+    if row_position_last < VIEW_HEIGHT {
         0
     } else {
         rows[row_position_last - (VIEW_HEIGHT - 1)].0
