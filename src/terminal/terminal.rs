@@ -9,7 +9,7 @@ pub struct Terminal {
     pub buffer: [u16; BUFFER_SIZE],
     pub cursor: usize,
     pub last_entry_index: usize,
-    pub rows_scrolled: usize
+    pub rows_scrolled: usize,
 }
 
 impl Terminal {
@@ -18,7 +18,7 @@ impl Terminal {
             buffer: [Entry::new(b' ').to_u16(); BUFFER_SIZE],
             cursor: 0,
             last_entry_index: 0,
-            rows_scrolled: 0
+            rows_scrolled: 0,
         }
     }
 
@@ -52,7 +52,7 @@ impl Terminal {
     pub fn scroll(&mut self, delta: isize) {
         if delta >= 0 {
             self.rows_scrolled += delta as usize;
-        }else if delta < 0 && delta.abs() as usize <= self.rows_scrolled {
+        } else if delta < 0 && delta.abs() as usize <= self.rows_scrolled {
             self.rows_scrolled -= delta.abs() as usize;
         } else {
             self.rows_scrolled = 0;
