@@ -214,6 +214,7 @@ impl Entry {
 ///
 /// The colors are defined as `u8` values, where each value corresponds to a particular color.
 /// The default color is light gray on black.
+#[allow(dead_code)]
 #[repr(u8)]
 pub enum Color {
     /// Light gray on black (default)
