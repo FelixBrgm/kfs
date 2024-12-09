@@ -1,10 +1,9 @@
+#![allow(unused_imports)]
 use core::panic::PanicInfo;
 
 use crate::terminal::vga::Color;
 
-
-
-// #[cfg(not(test))]
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     use crate::terminal::Terminal;
