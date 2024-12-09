@@ -1,4 +1,4 @@
-use crate::vga::{VGA_HEIGHT, VGA_WIDTH};
+use super::vga::{VIEW_HEIGHT, VIEW_WIDTH};
 use core::arch::asm;
 
 /// Abstraction for managing the [Text-mode cursor](https://wiki.osdev.org/Text_Mode_Cursor).
@@ -22,12 +22,12 @@ impl Cursor {
     ///
     /// 2.  `update_pos` may cause undefined behavior if called with `x` or `y` values outside of the range `0x00..=0x0F`.
     pub unsafe fn update_pos(&self, x: u16, y: u16) {
-        let out_of_bounds: bool = !(0..VGA_HEIGHT).contains(&(y as u8)) || !(0..VGA_WIDTH).contains(&(x as u8));
+        let out_of_bounds: bool = !(0..VIEW_HEIGHT).contains(&(y as usize)) || !(0..VIEW_WIDTH).contains(&(x as usize));
         if out_of_bounds {
             return;
         }
 
-        let pos = y * VGA_WIDTH as u16 + x;
+        let pos = y * VIEW_WIDTH as u16 + x;
 
         self.update(Cursor::LOCATION_REG_LOW, (pos & 0xFF) as u8);
         self.update(Cursor::LOCATION_REG_HIGH, ((pos >> 8) & 0xFF) as u8);

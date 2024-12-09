@@ -1,10 +1,34 @@
 use core::arch::asm;
 
-use crate::{print, vga::Vga};
-
 pub const PS2_DATA_PORT: u16 = 0x60;
 pub const PS2_STATUS_PORT: u16 = 0x64;
 pub const PS2_OUTPUT_BUFFER_STATUS_BIT: u8 = 1;
+
+/// Reads from the PS2 data port if the PS2 status port is ready. Returns `Some(KeyScanCode)`
+/// if the converted scancode is a supported character.
+///
+/// /// ### Example Usage:
+/// ```
+/// let mut v = Vga::new();
+///
+/// if let Some(c) = read_if_ready() == KeyScanCode::A {
+///     v.write_char(b'a');
+/// }
+pub fn read_if_ready() -> Option<Key> {
+    if !is_ps2_data_available() {
+        return None;
+    }
+
+    let code = unsafe { read(PS2_DATA_PORT) };
+
+    SCANCODE_TO_KEY[code as usize]
+}
+
+/// Returns `true` if the PS2 input buffer has data ready to be read,
+/// meaning the least significant bit of the PS2 status port is set.
+fn is_ps2_data_available() -> bool {
+    status() & PS2_OUTPUT_BUFFER_STATUS_BIT != 0
+}
 
 /// Reads from `PS2_STATUS_PORT` and returns the extracted value.
 fn status() -> u8 {
@@ -15,47 +39,6 @@ fn status() -> u8 {
     }
 
     res
-}
-
-/// Returns `true` if the least significant bit of the ps2 status port is set,
-/// meaning it has been written to.
-fn buffer_full() -> bool {
-    status() & PS2_OUTPUT_BUFFER_STATUS_BIT != 0
-}
-
-/// Reads from the PS2 data port if the PS2 status port is ready. Returns `Some(char)`
-/// if the converted scancode is a supported character.
-///
-/// If `terminal` is not `None`, uses it to display the scancodes on keyboard inputs.
-/// /// ### Example Usage:
-/// ```
-/// let mut v = Vga::new();
-///
-/// if let Some(c) = read_if_ready(None) == 'a' as u8 {
-///     v.write_char(b'a');
-/// }
-pub fn read_if_ready(terminal: Option<&mut Vga>) -> Option<char> {
-    if !buffer_full() {
-        return None;
-    }
-
-    let code = unsafe { read(PS2_DATA_PORT) };
-
-    if let Some(term) = terminal {
-        let conv = print::u64_to_base(code as u64, 10).unwrap();
-        let buf = conv.1;
-        let len = conv.0;
-        let num_slice = &buf[buf.len() - len..];
-        term.write_char(b'|');
-        term.write_u8_arr(num_slice);
-        term.write_char(b'|');
-    }
-
-    if let Some(char) = SCANCODE_TO_ASCII.get(code as usize).and_then(|&opt| opt) {
-        return Some(char);
-    }
-
-    None
 }
 
 /// Reads from `port` and returns the extracted value.
@@ -77,76 +60,128 @@ unsafe fn read(port: u16) -> u8 {
     res
 }
 
-pub const BACKSPACE: char = 14 as char;
-pub const ENTER: char = 28 as char;
-pub const ARROW_LEFT: char = 75 as char;
-pub const ARROW_UP: char = 72 as char;
-pub const ARROW_RIGHT: char = 77 as char;
-pub const ARROW_DOWN: char = 80 as char;
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, PartialOrd)]
+pub enum Key {
+    Tab,
+    Enter,
+    ArrowUp,
+    Backspace,
+    ArrowDown,
+    ArrowLeft,
+    ArrowRight,
+    A = b'a',
+    B = b'b',
+    C = b'c',
+    D = b'd',
+    E = b'e',
+    F = b'f',
+    G = b'g',
+    H = b'h',
+    I = b'i',
+    J = b'j',
+    K = b'k',
+    L = b'l',
+    M = b'm',
+    N = b'n',
+    O = b'o',
+    P = b'p',
+    Q = b'q',
+    R = b'r',
+    S = b's',
+    T = b't',
+    U = b'u',
+    V = b'v',
+    W = b'w',
+    X = b'x',
+    Y = b'y',
+    Z = b'z',
+    N0 = b'0',
+    N1 = b'1',
+    N2 = b'2',
+    N3 = b'3',
+    N4 = b'4',
+    N5 = b'5',
+    N6 = b'6',
+    N7 = b'7',
+    N8 = b'8',
+    N9 = b'9',
+    Dot = b'.',
+    Star = b'*',
+    Space = b' ',
+    Minus = b'-',
+    Equal = b'=',
+    Slash = b'/',
+    Comma = b',',
+    Backtick = b'`',
+    Semicolon = b';',
+    Backslash = b'\\',
+    SingleQuote = b'\'',
+    SquareBracketsOpen = b'[',
+    SquareBracketsClosed = b']',
+}
 
+use Key::*;
 /// Conversion table for all characters currently supported by our kernel for PS2 input.
-const SCANCODE_TO_ASCII: [Option<char>; 256] = [
+const SCANCODE_TO_KEY: [Option<Key>; 256] = [
     None,
     None,
-    Some('1'),
-    Some('2'),
-    Some('3'),
-    Some('4'),
-    Some('5'),
-    Some('6'),
-    Some('7'),
-    Some('8'),
-    Some('9'),
-    Some('0'),
-    Some('-'),
-    Some('='),
-    Some(BACKSPACE),
-    Some('\t'),
-    Some('q'),
-    Some('w'),
-    Some('e'),
-    Some('r'),
-    Some('t'),
-    Some('y'),
-    Some('u'),
-    Some('i'),
-    Some('o'),
-    Some('p'),
-    Some('['),
-    Some(']'),
-    Some(ENTER),
+    Some(N1),
+    Some(N2),
+    Some(N3),
+    Some(N4),
+    Some(N5),
+    Some(N6),
+    Some(N7),
+    Some(N8),
+    Some(N9),
+    Some(N0),
+    Some(Minus),
+    Some(Equal),
+    Some(Backspace),
+    Some(Tab),
+    Some(Q),
+    Some(W),
+    Some(E),
+    Some(R),
+    Some(T),
+    Some(Y),
+    Some(U),
+    Some(I),
+    Some(O),
+    Some(P),
+    Some(SquareBracketsOpen),
+    Some(SquareBracketsClosed),
+    Some(Enter),
     None,
-    Some('a'),
-    Some('s'),
-    Some('d'),
-    Some('f'),
-    Some('g'),
-    Some('h'),
-    Some('j'),
-    Some('k'),
-    Some('l'),
-    Some(';'),
-    Some('\''),
-    Some('`'),
+    Some(A),
+    Some(S),
+    Some(D),
+    Some(F),
+    Some(G),
+    Some(H),
+    Some(J),
+    Some(K),
+    Some(L),
+    Some(Semicolon),
+    Some(SingleQuote),
+    Some(Backtick),
     None,
-    Some('\\'),
-    Some('z'),
-    Some('x'),
-    Some('c'),
-    Some('v'),
-    Some('b'),
-    Some('n'),
-    Some('m'),
-    Some(','),
-    Some('.'),
-    Some('/'),
+    Some(Backslash),
+    Some(Z),
+    Some(X),
+    Some(C),
+    Some(V),
+    Some(B),
+    Some(N),
+    Some(M),
+    Some(Comma),
+    Some(Dot),
+    Some(Slash),
     None,
-    Some('*'),
+    Some(Star),
     None,
-    Some(' '),
-    None,
-    None,
-    None,
+    Some(Space),
     None,
     None,
     None,
@@ -158,15 +193,18 @@ const SCANCODE_TO_ASCII: [Option<char>; 256] = [
     None,
     None,
     None,
-    Some(ARROW_UP),
     None,
     None,
-    Some(ARROW_LEFT),
     None,
-    Some(ARROW_RIGHT),
+    Some(ArrowUp),
     None,
     None,
-    Some(ARROW_DOWN),
+    Some(ArrowLeft),
+    None,
+    Some(ArrowRight),
+    None,
+    None,
+    Some(ArrowDown),
     None,
     None,
     None,
@@ -343,16 +381,3 @@ const SCANCODE_TO_ASCII: [Option<char>; 256] = [
     None,
     None,
 ];
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    #[should_panic]
-    fn read_from_random_port() {
-        unsafe {
-            read(0x66);
-        }
-    }
-}

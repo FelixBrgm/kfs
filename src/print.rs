@@ -1,11 +1,29 @@
-#[allow(unused)]
-pub fn u64_to_base(mut addr: u64, base: u8) -> Result<(usize, [u8; 65]), ()> {
+use core::str;
+
+#[derive(Debug)]
+pub struct ParseError;
+
+pub fn slice_to_str((slice, len): (&[u8; 65], usize)) -> Result<&str, ParseError> {
+    let real_part = &slice[65 - len..65];
+
+    match str::from_utf8(real_part) {
+        Ok(s) => Ok(s),
+        Err(_) => Err(ParseError),
+    }
+}
+
+pub fn u64_to_base(mut addr: u64, base: u8) -> Result<([u8; 65], usize), ()> {
     if !(2..=16).contains(&base) {
         return Err(());
     }
 
     let mut buf: [u8; 65] = [0; 65];
     let digits: &[u8; 16] = b"0123456789ABCDEF";
+
+    if addr == 0 {
+        buf[64] = b'0';
+        return Ok((buf, 1));
+    }
 
     let mut idx = buf.len();
 
@@ -21,7 +39,7 @@ pub fn u64_to_base(mut addr: u64, base: u8) -> Result<(usize, [u8; 65]), ()> {
 
     let len = buf.len() - idx;
 
-    Ok((len, buf))
+    Ok((buf, len))
 }
 
 #[cfg(test)]
@@ -34,10 +52,10 @@ mod u64_to_base_test {
 
         let res = match u64_to_base(num, 16) {
             Ok((len, buf)) => (len, buf),
-            _ => (0, [0u8; 65]),
+            _ => ([0u8; 65], 0),
         };
 
-        let result_slice = &res.1[65 - res.0..];
+        let result_slice = &res.0[65 - res.1..];
 
         let result_str = core::str::from_utf8(result_slice).unwrap();
 
@@ -50,10 +68,10 @@ mod u64_to_base_test {
 
         let res = match u64_to_base(num, 16) {
             Ok((len, buf)) => (len, buf),
-            _ => (0, [0u8; 65]),
+            _ => ([0u8; 65], 0),
         };
 
-        let result_slice = &res.1[65 - res.0..];
+        let result_slice = &res.0[65 - res.1..];
 
         let result_str = core::str::from_utf8(result_slice).unwrap();
 
@@ -66,10 +84,10 @@ mod u64_to_base_test {
 
         let res = match u64_to_base(num, 16) {
             Ok((len, buf)) => (len, buf),
-            _ => (0, [0u8; 65]),
+            _ => ([0u8; 65], 0),
         };
 
-        let result_slice = &res.1[65 - res.0..];
+        let result_slice = &res.0[65 - res.1..];
 
         let result_str = core::str::from_utf8(result_slice).unwrap();
 
@@ -82,10 +100,10 @@ mod u64_to_base_test {
 
         let res = match u64_to_base(num, 16) {
             Ok((len, buf)) => (len, buf),
-            _ => (0, [0u8; 65]),
+            _ => ([0u8; 65], 0),
         };
 
-        let result_slice = &res.1[65 - res.0..];
+        let result_slice = &res.0[65 - res.1..];
 
         let result_str = core::str::from_utf8(result_slice).unwrap();
 
