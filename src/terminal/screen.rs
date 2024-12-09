@@ -80,7 +80,6 @@ impl Screen {
         self.cursor += 1;
     }
 
-    #[allow(dead_code)]
     pub fn write_str(&mut self, string: &str) {
         for &c in string.as_bytes().iter() {
             self.write(c);

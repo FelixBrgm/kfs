@@ -42,6 +42,7 @@ impl Terminal {
         self.screens[self.active_screen].write_str(string);
     }
 
+    #[allow(dead_code)]
     pub fn write_color_str(&mut self, string: &str, color: u8) {
         self.screens[self.active_screen].write_color_str(string, color);
     }
