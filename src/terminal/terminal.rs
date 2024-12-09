@@ -8,6 +8,10 @@ pub struct Terminal {
 }
 
 impl Terminal {
+    /// Creates a new `Terminal` instance with the default screen and sets the first screen as active.
+    ///
+    /// # Returns
+    /// A `Terminal` instance with the default screen state.
     pub fn default() -> Terminal {
         Terminal {
             active_screen: 0,
@@ -15,6 +19,13 @@ impl Terminal {
         }
     }
 
+    /// Handles a key press event by updating the terminal's state.
+    ///
+    /// If the key is the `Tab` key, it switches to the next screen. Otherwise, the key event is passed
+    /// to the active screen for processing.
+    ///
+    /// # Parameters
+    /// - `key`: The key that was pressed.
     pub fn handle_key(&mut self, key: Key) {
         match key {
             Key::Tab => {

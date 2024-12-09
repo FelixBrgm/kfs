@@ -1,7 +1,7 @@
 mod cursor;
 pub mod ps2;
-#[allow(clippy::module_inception)]
 mod screen;
+#[allow(clippy::module_inception)]
 mod terminal;
 pub mod vga;
 
