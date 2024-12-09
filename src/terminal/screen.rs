@@ -80,12 +80,14 @@ impl Screen {
         self.cursor += 1;
     }
 
+    #[allow(dead_code)]
     pub fn write_str(&mut self, string: &str) {
         for &c in string.as_bytes().iter() {
             self.write(c);
         }
     }
 
+    #[allow(dead_code)]
     pub fn write_color_str(&mut self, string: &str, color: u8) {
         for &c in string.as_bytes().iter() {
             self.write_color(c, color);
