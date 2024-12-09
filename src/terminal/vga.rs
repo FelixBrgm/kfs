@@ -1,6 +1,5 @@
 use core::ptr::{read_volatile, write_volatile};
 
-
 use super::{
     cursor::Cursor,
     screen::{Screen, BUFFER_SIZE},

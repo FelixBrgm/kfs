@@ -1,6 +1,5 @@
 #![no_std]
 
-
 use print::{slice_to_str, u64_to_base};
 
 mod gdt;
